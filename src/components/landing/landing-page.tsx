@@ -362,9 +362,9 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
       </section>
 
       <footer className="border-t border-white/70 bg-white/50 px-5 py-8 text-center text-sm text-slate-500 backdrop-blur">
-        <p className="font-semibold text-slate-700">
-          {t.appName} · <LanguageToggle compact className="ms-2 align-middle" />
-        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 font-semibold text-slate-700">
+          <span>{t.appName}</span> · <LanguageToggle compact className="ms-2 align-middle" />
+        </div>
         <p className="mt-2">{L.footer}</p>
       </footer>
     </div>
