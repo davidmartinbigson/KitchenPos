@@ -22,3 +22,5 @@ npm-debug.log*
 # generated artifacts
 next-env.d.ts
 tsconfig.tsbuildinfo
+.vercel
+.env*
