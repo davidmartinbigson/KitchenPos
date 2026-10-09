@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Kitchen POS · Open-source restaurant point of sale
 
 A full-stack, open-source point of sale for restaurants, cafés and food stalls.
@@ -119,3 +120,6 @@ until they redeem a new key — their menu and sales data are kept safe in the m
 ## License
 
 MIT – use it, fork it, improve it.
+=======
+# KitchenPos
+>>>>>>> 7f12e3eb926c9e49a00a0b63b2d9dbf047f3d02d
