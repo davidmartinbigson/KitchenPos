@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
-import { count, desc, ne, sql, sum } from "drizzle-orm";
+import { count, desc, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { menuItems, orders, users } from "@/db/schema";
+import { orders, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/api";
+import { isOnline } from "@/lib/presence";
 
-/** All shop owners with their subscription state and usage stats. */
+/**
+ * All shop owners with their subscription state and LIVE presence.
+ * For privacy, customer sales data (orders, revenue, menu counts) is NOT
+ * exposed to the master admin — only identity, status and presence.
+ */
 export async function GET() {
   const { user, response } = await requireAdmin();
   if (!user) return response;
@@ -16,12 +21,12 @@ export async function GET() {
       email: users.email,
       shopName: users.shopName,
       currency: users.currency,
+      country: users.country,
       suspended: users.suspended,
       accessExpiresAt: users.accessExpiresAt,
+      itemLimit: users.itemLimit,
+      lastSeenAt: users.lastSeenAt,
       createdAt: users.createdAt,
-      orderCount: sql<number>`(select count(*) from ${orders} where ${orders.userId} = ${users.id})`.mapWith(Number),
-      revenue: sql<number>`coalesce((select sum(${orders.total}) from ${orders} where ${orders.userId} = ${users.id}), 0)`.mapWith(Number),
-      menuCount: sql<number>`(select count(*) from ${menuItems} where ${menuItems.userId} = ${users.id})`.mapWith(Number),
     })
     .from(users)
     .where(ne(users.role, "admin"))
@@ -35,21 +40,21 @@ export async function GET() {
     .where(ne(users.role, "admin"));
 
   const [platform] = await db
-    .select({
-      orders: count(orders.id).mapWith(Number),
-      revenue: sum(orders.total).mapWith(Number),
-    })
+    .select({ orders: count(orders.id).mapWith(Number) })
     .from(orders);
 
+  const customers = rows.map((r) => ({ ...r, online: isOnline(r.lastSeenAt) }));
+
   return NextResponse.json({
-    customers: rows,
+    customers,
     summary: {
       customers: totals?.customers ?? 0,
       active: rows.filter(
         (r) => !r.suspended && r.accessExpiresAt && new Date(r.accessExpiresAt).getTime() > Date.now(),
       ).length,
+      online: customers.filter((c) => c.online).length,
+      offline: customers.length - customers.filter((c) => c.online).length,
       orders: platform?.orders ?? 0,
-      revenue: platform?.revenue ?? 0,
     },
   });
 }

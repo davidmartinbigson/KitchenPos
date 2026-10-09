@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { jsonError, requireUser } from "@/lib/api";
 import { isLang } from "@/lib/i18n";
+import { currencyForCountry, isCountryCode } from "@/lib/countries";
 
 export async function GET() {
   const { user, response } = await requireUser();
@@ -34,6 +35,12 @@ export async function PATCH(request: Request) {
     if (!currency) return jsonError("REQUIRED", 400);
     updates.currency = currency;
   }
+  if (body.country !== undefined) {
+    if (!isCountryCode(body.country)) return jsonError("INVALID_COUNTRY", 400);
+    updates.country = String(body.country);
+    // Changing country auto-updates the symbol unless one was sent explicitly.
+    if (body.currency === undefined) updates.currency = currencyForCountry(String(body.country));
+  }
   if (body.language !== undefined) {
     if (!isLang(body.language)) return jsonError("INVALID_LANGUAGE", 400);
     updates.language = body.language;
@@ -49,6 +56,7 @@ export async function PATCH(request: Request) {
       email: users.email,
       shopName: users.shopName,
       currency: users.currency,
+      country: users.country,
       language: users.language,
     });
 

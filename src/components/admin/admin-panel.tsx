@@ -16,17 +16,19 @@ import {
   ShieldX,
   Store,
   Trash2,
-  TrendingUp,
   Users,
-  Wallet,
   Play,
+  ListPlus,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { AnimatedNumber } from "@/components/animated-number";
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, Select, Skeleton, cn } from "@/components/ui";
-import { formatDate, formatMoney, formatNumber } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 
 type Customer = {
   id: number;
@@ -34,15 +36,16 @@ type Customer = {
   email: string;
   shopName: string;
   currency: string;
+  country: string;
   suspended: boolean;
   accessExpiresAt: string | null;
+  itemLimit: number;
+  lastSeenAt: string | null;
+  online: boolean;
   createdAt: string;
-  orderCount: number;
-  revenue: number;
-  menuCount: number;
 };
 
-type Summary = { customers: number; active: number; orders: number; revenue: number };
+type Summary = { customers: number; active: number; online: number; offline: number; orders: number };
 
 type LicenseKey = {
   id: number;
@@ -89,6 +92,8 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   const [generating, setGenerating] = useState(false);
   const [newKeys, setNewKeys] = useState<LicenseKey[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
+  const [limitTarget, setLimitTarget] = useState<Customer | null>(null);
+  const [limitValue, setLimitValue] = useState("500");
 
   const loadCustomers = useCallback(() => {
     fetch("/api/admin/customers")
@@ -110,6 +115,9 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   useEffect(() => {
     loadCustomers();
     loadKeys();
+    // Keep live Online/Offline presence fresh.
+    const timer = setInterval(loadCustomers, 15_000);
+    return () => clearInterval(timer);
   }, [loadCustomers, loadKeys]);
 
   const filtered = useMemo(() => {
@@ -244,8 +252,8 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   const cards = [
     { label: A.totalCustomers, value: summary?.customers ?? 0, icon: Users, gradient: "from-orange-500 to-rose-500", fmt: (n: number) => formatNumber(Math.round(n), lang) },
     { label: A.activeCustomers, value: summary?.active ?? 0, icon: BadgeCheck, gradient: "from-emerald-500 to-teal-500", fmt: (n: number) => formatNumber(Math.round(n), lang) },
-    { label: A.platformOrders, value: summary?.orders ?? 0, icon: TrendingUp, gradient: "from-sky-500 to-indigo-500", fmt: (n: number) => formatNumber(Math.round(n), lang) },
-    { label: A.platformRevenue, value: summary?.revenue ?? 0, icon: Wallet, gradient: "from-violet-500 to-fuchsia-500", fmt: (n: number) => formatMoney(n, "Rs") },
+    { label: A.onlineNow, value: summary?.online ?? 0, icon: Wifi, gradient: "from-sky-500 to-indigo-500", fmt: (n: number) => formatNumber(Math.round(n), lang) },
+    { label: A.offlineNow, value: summary?.offline ?? 0, icon: WifiOff, gradient: "from-slate-500 to-slate-700", fmt: (n: number) => formatNumber(Math.round(n), lang) },
   ];
 
   return (
@@ -270,11 +278,13 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
               </span>
               <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{A.title}</h1>
               <p className="mt-2 text-slate-300">{A.subtitle}</p>
+              <p className="mt-2 text-xs font-semibold text-slate-400">{A.presenceNote}</p>
               <p className="mt-3 text-sm font-semibold text-amber-200">
                 {adminName} · {adminEmail}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
+              <ThemeToggle compact />
               <LanguageToggle compact />
               <Button onClick={() => setGenOpen(true)}>
                 <Plus className="h-4 w-4" /> {A.generate}
@@ -412,19 +422,33 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm">
-                              <div className="text-center">
-                                <p className="font-black text-slate-900">{formatNumber(c.orderCount, lang)}</p>
-                                <p className="text-xs text-slate-500">{t.dashboard.totalOrders}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="font-black text-slate-900">{formatMoney(c.revenue, c.currency)}</p>
-                                <p className="text-xs text-slate-500">{t.dashboard.totalRevenue}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="font-black text-slate-900">{formatNumber(c.menuCount, lang)}</p>
-                                <p className="text-xs text-slate-500">{t.dashboard.menuItems}</p>
-                              </div>
+                            <div className="flex flex-wrap items-center gap-3 text-sm">
+                              {/* Privacy: sales data is hidden; only live presence is shown. */}
+                              {c.online ? (
+                                <span className="flex items-center gap-2 rounded-full bg-emerald-100 px-3.5 py-1.5 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+                                  <span className="relative flex h-2.5 w-2.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                  </span>
+                                  {A.online}
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-2 rounded-full bg-slate-100 px-3.5 py-1.5 text-xs font-black text-slate-500 ring-1 ring-slate-200">
+                                  <WifiOff className="h-3.5 w-3.5" />
+                                  {A.offline}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setLimitTarget(c);
+                                  setLimitValue(String(c.itemLimit));
+                                }}
+                                className="flex items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1.5 text-xs font-black text-indigo-700 ring-1 ring-indigo-200 transition hover:bg-indigo-100"
+                                title={A.setLimit}
+                              >
+                                <ListPlus className="h-3.5 w-3.5" />
+                                {A.itemLimit}: {formatNumber(c.itemLimit, lang)}
+                              </button>
                             </div>
                           </div>
 
@@ -439,6 +463,17 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                               }}
                             >
                               <CalendarPlus className="h-4 w-4" /> {A.extend}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={busyId === c.id}
+                              onClick={() => {
+                                setLimitTarget(c);
+                                setLimitValue(String(c.itemLimit));
+                              }}
+                            >
+                              <ListPlus className="h-4 w-4" /> {A.setLimit}
                             </Button>
                             {c.suspended ? (
                               <Button size="sm" variant="success" disabled={busyId === c.id} onClick={() => customerAction(c.id, { action: "resume" })}>
@@ -678,6 +713,64 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                 )}
               >
                 +{d} {A.daysUnit}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Item limit modal */}
+      <Modal
+        open={Boolean(limitTarget)}
+        onClose={() => setLimitTarget(null)}
+        title={A.limitTitle}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setLimitTarget(null)}>
+              {t.cancel}
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!limitTarget) return;
+                await customerAction(limitTarget.id, {
+                  action: "setItemLimit",
+                  value: Number(limitValue),
+                });
+                setLimitTarget(null);
+              }}
+            >
+              <ListPlus className="h-4 w-4" /> {A.setLimit}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {limitTarget && (
+            <p className="font-semibold text-slate-700">
+              {limitTarget.shopName} · {limitTarget.email}
+            </p>
+          )}
+          <p className="text-sm text-slate-500">{A.limitHint}</p>
+          <Field label={A.itemLimit}>
+            <Input
+              type="number"
+              min={1}
+              max={100000}
+              value={limitValue}
+              onChange={(e) => setLimitValue(e.target.value)}
+            />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            {[500, 1000, 2000, 5000].map((n) => (
+              <button
+                key={n}
+                onClick={() => setLimitValue(String(n))}
+                className={cn(
+                  "rounded-xl px-3 py-1.5 text-xs font-bold ring-1 transition",
+                  limitValue === String(n) ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200",
+                )}
+              >
+                {formatNumber(n, lang)}
               </button>
             ))}
           </div>

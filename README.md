@@ -29,10 +29,27 @@ and **Framer Motion**. Fully bilingual: **English (default)** and **Urdu (ارد
 - **License keys & subscriptions** – the app is locked until the shop owner redeems a unique
   activation key (`KPOS-XXXX-XXXX-XXXX`). Keys carry a duration (monthly, quarterly, half-yearly,
   yearly, lifetime or custom days); redeeming stacks onto any remaining time.
-- **Master admin panel** (`/admin`) – only for the platform owner: see every customer with their
-  shop, subscription status, orders, revenue and menu size; extend a subscription, suspend/resume,
-  cut access instantly, or delete a customer. Generate keys in batches, copy them, and revoke
-  or delete unused keys.
+- **Master admin panel** (`/admin`) – only for the platform owner. **Privacy-first:** customer
+  sales data (orders, revenue, menu counts) is NEVER shown — you only see each restaurant's
+  live **Online / Offline** presence (heartbeat-based, refreshes every 15s), subscription status
+  and identity. Extend a subscription, suspend/resume, cut access instantly, or delete a customer.
+  Generate keys in batches, copy them, and revoke or delete unused keys.
+- **Per-restaurant item limits** – every shop can list up to **500 menu items** by default.
+  When a restaurant needs more, the master admin raises or lowers the limit per restaurant
+  straight from the admin panel (Set limit).
+- **Offline-first POS** – if the internet drops, the cashier keeps selling without interruption:
+  orders are stored safely on the device, stamped `OFF-x` on the receipt and replayed to the
+  database **automatically the moment connectivity returns** (with a live pending-sync banner).
+- **Forgot / reset password** – every login form has a *Forgot password?* link. Owners and staff
+  enter their email and either receive a **reset link by email** (when `SMTP_HOST` etc. are set)
+  or get the **link directly on screen** to choose a new password (30-minute one-time tokens).
+- **Country-based currency** – pick your country at signup or in Settings and the whole app uses
+  the right symbol everywhere: Pakistan → `Rs`, USA → `$`, UK → `£`, UAE → `AED`, India → `₹`,
+  EU → `€` and 30+ more. The **landing page auto-detects** the visitor's country too.
+- **Category dropdown** – menu items use a proper category selector listing every existing
+  category, with a "+ New category" option to add more on the fly.
+- **Dark / light mode** – one-tap theme switcher in the top bar of the app, admin panel and
+  login screens. The choice persists and applies without a flash on reload.
 - **Language** – switch the whole interface between English and Urdu from the header or Settings.
   The choice is remembered per browser and saved to your account.
 - **Animated, responsive UI** – works on mobile (bottom tab bar), tablet and desktop (sidebar).

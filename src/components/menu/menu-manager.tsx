@@ -20,11 +20,12 @@ import {
 import { CsvImport } from "@/components/menu/csv-import";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { Button, Card, EmptyState, Field, Input, Modal, Textarea, cn, errorText } from "@/components/ui";
+import { Button, Card, EmptyState, Field, Input, Modal, Select, Textarea, cn, errorText } from "@/components/ui";
 import { compressImage, formatMoney, formatNumber } from "@/lib/format";
 import type { MenuItemDTO } from "@/lib/types";
 
 const EMOJI_CHOICES = ["🍽️", "🍔", "🍕", "🍛", "🍗", "🥤", "🍰", "🍜", "🌮", "🥗", "🍳", "☕", "🍟", "🥘", "🍢", "🥙", "🧁", "🍦"];
+const NEW_CATEGORY = "__new_category__";
 
 type FormState = {
   name: string;
@@ -46,7 +47,15 @@ const emptyForm: FormState = {
   imageData: null,
 };
 
-export function MenuManager({ initialItems, currency }: { initialItems: MenuItemDTO[]; currency: string }) {
+export function MenuManager({
+  initialItems,
+  currency,
+  itemLimit = 500,
+}: {
+  initialItems: MenuItemDTO[];
+  currency: string;
+  itemLimit?: number;
+}) {
   const { t, lang } = useI18n();
   const toast = useToast();
   const M = t.menu;
@@ -57,6 +66,7 @@ export function MenuManager({ initialItems, currency }: { initialItems: MenuItem
   const [editing, setEditing] = useState<MenuItemDTO | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [newCatMode, setNewCatMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MenuItemDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -81,8 +91,13 @@ export function MenuManager({ initialItems, currency }: { initialItems: MenuItem
   const money = (n: number) => formatMoney(n, currency);
 
   function openCreate() {
+    if (items.length >= itemLimit) {
+      toast.show(M.limitReached, "error");
+      return;
+    }
     setEditing(null);
     setForm(emptyForm);
+    setNewCatMode(false);
     setFormOpen(true);
   }
 
@@ -97,6 +112,7 @@ export function MenuManager({ initialItems, currency }: { initialItems: MenuItem
       available: item.available,
       imageData: item.imageData,
     });
+    setNewCatMode(false);
     setFormOpen(true);
   }
 
@@ -203,7 +219,20 @@ export function MenuManager({ initialItems, currency }: { initialItems: MenuItem
           <h1 className="text-3xl font-black tracking-tight text-slate-950">{M.title}</h1>
           <p className="mt-1 text-slate-600">{M.subtitle}</p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span
+            className={cn(
+              "flex h-13 items-center rounded-2xl px-4 text-xs font-bold ring-1",
+              items.length >= itemLimit
+                ? "bg-rose-50 text-rose-600 ring-rose-200"
+                : items.length >= itemLimit * 0.9
+                  ? "bg-amber-50 text-amber-700 ring-amber-200"
+                  : "bg-white text-slate-600 ring-slate-200",
+            )}
+            title={M.limitUsage}
+          >
+            {formatNumber(items.length, lang)} / {formatNumber(itemLimit, lang)} {M.limitUsage}
+          </span>
           <Button size="lg" variant="secondary" onClick={() => setImportOpen(true)}>
             <FileSpreadsheet className="h-5 w-5 text-emerald-600" /> {t.importer.button}
           </Button>
@@ -444,18 +473,40 @@ export function MenuManager({ initialItems, currency }: { initialItems: MenuItem
             </Field>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label={M.category}>
-                <Input
-                  list="category-options"
-                  maxLength={60}
-                  value={form.category}
-                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                  placeholder="Main course"
-                />
-                <datalist id="category-options">
+                <Select
+                  value={newCatMode ? NEW_CATEGORY : form.category}
+                  onChange={(e) => {
+                    if (e.target.value === NEW_CATEGORY) {
+                      setNewCatMode(true);
+                      setForm((p) => ({ ...p, category: "" }));
+                    } else {
+                      setNewCatMode(false);
+                      setForm((p) => ({ ...p, category: e.target.value }));
+                    }
+                  }}
+                >
+                  {!form.category && !newCatMode && (
+                    <option value="" disabled>
+                      {M.selectCategory}
+                    </option>
+                  )}
                   {categories.map((c) => (
-                    <option key={c} value={c} />
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </datalist>
+                  <option value={NEW_CATEGORY}>{M.newCategory}</option>
+                </Select>
+                {newCatMode && (
+                  <Input
+                    className="mt-2.5"
+                    maxLength={60}
+                    autoFocus
+                    value={form.category}
+                    onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                    placeholder={M.newCategoryName}
+                  />
+                )}
               </Field>
               <Field label={M.price}>
                 <div className="relative">

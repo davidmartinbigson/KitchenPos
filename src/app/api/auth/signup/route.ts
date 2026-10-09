@@ -9,6 +9,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth";
 import { jsonError } from "@/lib/api";
+import { currencyForCountry, isCountryCode, DEFAULT_COUNTRY } from "@/lib/countries";
 
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
   const shopName = String(body.shopName ?? "").trim();
+  const country = isCountryCode(body.country) ? String(body.country) : DEFAULT_COUNTRY;
 
   if (!name || !email || !shopName) return jsonError("REQUIRED", 400);
   if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 191) return jsonError("INVALID_EMAIL", 400);
@@ -42,6 +44,8 @@ export async function POST(request: Request) {
       email,
       passwordHash,
       shopName: shopName.slice(0, 120),
+      country,
+      currency: currencyForCountry(country),
     })
     .returning({
       id: users.id,
@@ -49,6 +53,7 @@ export async function POST(request: Request) {
       email: users.email,
       shopName: users.shopName,
       currency: users.currency,
+      country: users.country,
       language: users.language,
     });
 

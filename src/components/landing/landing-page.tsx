@@ -17,7 +17,18 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button, cn } from "@/components/ui";
+import { currencyForCountry, detectCountryFromLocale } from "@/lib/countries";
+
+/** Visitor's local currency symbol (Rs for PK, $ for US, £ for UK, ...). */
+function useVisitorCurrency() {
+  const [symbol, setSymbol] = useState("Rs");
+  useEffect(() => {
+    setSymbol(currencyForCountry(detectCountryFromLocale()));
+  }, []);
+  return symbol;
+}
 
 function Counter({ to, duration = 2 }: { to: number; duration?: number }) {
   const [value, setValue] = useState(0);
@@ -39,6 +50,7 @@ const demoItems = [
 ];
 
 function PosPreview({ labels }: { labels: { total: string; change: string; items: string; paid: string } }) {
+  const cur = useVisitorCurrency();
   const total = demoItems.reduce((s, i) => s + i.price * i.qty, 0);
   const received = 2000;
   return (
@@ -80,10 +92,10 @@ function PosPreview({ labels }: { labels: { total: string; change: string; items
               <div className="flex-1">
                 <p className="text-sm font-semibold text-slate-800">{item.name}</p>
                 <p className="text-xs text-slate-500">
-                  {item.qty} × Rs {item.price}
+                  {item.qty} × {cur} {item.price}
                 </p>
               </div>
-              <span className="text-sm font-bold text-slate-900">Rs {item.price * item.qty}</span>
+              <span className="text-sm font-bold text-slate-900">{cur} {item.price * item.qty}</span>
             </motion.div>
           ))}
         </div>
@@ -94,17 +106,17 @@ function PosPreview({ labels }: { labels: { total: string; change: string; items
             <span className="text-xs">{labels.items}: {demoItems.reduce((s, i) => s + i.qty, 0)}</span>
           </div>
           <p className="mt-1 text-3xl font-black tracking-tight">
-            Rs <Counter to={total} />
+            {cur} <Counter to={total} />
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-xl bg-white/10 p-2.5">
               <p className="text-xs text-slate-300">{labels.paid}</p>
-              <p className="font-bold">Rs {received.toLocaleString("en-US")}</p>
+              <p className="font-bold">{cur} {received.toLocaleString("en-US")}</p>
             </div>
             <div className="rounded-xl bg-emerald-400/20 p-2.5">
               <p className="text-xs text-emerald-200">{labels.change}</p>
               <p className="font-bold text-emerald-300">
-                Rs <Counter to={received - total} duration={2.4} />
+                {cur} <Counter to={received - total} duration={2.4} />
               </p>
             </div>
           </div>
@@ -117,7 +129,7 @@ function PosPreview({ labels }: { labels: { total: string; change: string; items
         className="absolute -left-6 top-10 hidden rounded-2xl bg-white p-3 shadow-xl sm:block"
       >
         <p className="text-xs text-slate-500">Today</p>
-        <p className="text-lg font-black text-slate-900">Rs 18,450</p>
+        <p className="text-lg font-black text-slate-900">{cur} 18,450</p>
         <p className="text-xs font-semibold text-emerald-600">▲ 12.4%</p>
       </motion.div>
     </motion.div>
@@ -158,6 +170,7 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
             <span className="text-lg font-black tracking-tight text-slate-900">{t.appName}</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle compact />
             <LanguageToggle compact />
             {loggedIn ? (
               <Link href="/dashboard">

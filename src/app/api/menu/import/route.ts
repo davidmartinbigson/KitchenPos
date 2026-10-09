@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems } from "@/db/schema";
 import { jsonError, requireActiveUser } from "@/lib/api";
@@ -55,7 +56,17 @@ export async function POST(request: Request) {
   if (rows.length === 0) return jsonError("NO_ROWS", 400);
   if (rows.length > MAX_ROWS) return jsonError("TOO_MANY_ROWS", 400);
 
-  const values: (typeof menuItems.$inferInsert)[] = [];
+  // Per-restaurant menu item limit (default 500; the master admin can raise it).
+  const [{ total }] = await db
+    .select({ total: count(menuItems.id).mapWith(Number) })
+    .from(menuItems)
+    .where(eq(menuItems.userId, user.id));
+  const remaining = Math.max(0, user.itemLimit - total);
+  if (remaining === 0) {
+    return NextResponse.json({ error: "ITEM_LIMIT", limit: user.itemLimit }, { status: 403 });
+  }
+
+  const parsed: { rowNumber: number; value: typeof menuItems.$inferInsert }[] = [];
   const skipped: { row: number; reason: string }[] = [];
 
   rows.forEach((row, index) => {
@@ -69,7 +80,7 @@ export async function POST(request: Request) {
       skipped.push({ row: index + 1, reason: "INVALID_PRICE" });
       return;
     }
-    values.push({
+    parsed.push({ rowNumber: index + 1, value: {
       userId: user.id,
       name: name.slice(0, 120),
       category: String(row.category ?? "").trim().slice(0, 60) || "General",
@@ -78,14 +89,20 @@ export async function POST(request: Request) {
       emoji: String(row.emoji ?? "").trim().slice(0, 8) || "🍽️",
       available: parseAvailable(row.available),
       imageData: parseImage(row.image),
-    });
+    } });
   });
 
-  if (values.length === 0) {
+  if (parsed.length === 0) {
     return NextResponse.json({ imported: 0, skipped, items: [] }, { status: 400 });
   }
 
-  const inserted = await db.insert(menuItems).values(values).returning({
+  // Respect the item limit: import what fits, report the rest as skipped.
+  const limited = parsed.slice(0, remaining);
+  parsed.slice(remaining).forEach((p) => {
+    skipped.push({ row: p.rowNumber, reason: "LIMIT" });
+  });
+
+  const inserted = await db.insert(menuItems).values(limited.map((p) => p.value)).returning({
     id: menuItems.id,
     name: menuItems.name,
     category: menuItems.category,

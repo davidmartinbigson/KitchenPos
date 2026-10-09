@@ -7,20 +7,22 @@ import { motion } from "framer-motion";
 import { Check, Globe2, LogOut, Save, Store, UserRound, Mail, Coins } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { Button, Card, Field, Input, cn, errorText } from "@/components/ui";
+import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/ui";
 import type { Lang } from "@/lib/i18n";
+import { COUNTRIES, currencyForCountry } from "@/lib/countries";
 
 const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
 
 export function SettingsForm({
   initial,
 }: {
-  initial: { name: string; email: string; shopName: string; currency: string; language: Lang };
+  initial: { name: string; email: string; shopName: string; currency: string; country: string; language: Lang };
 }) {
   const { t, lang, setLang } = useI18n();
   const toast = useToast();
   const router = useRouter();
   const [shopName, setShopName] = useState(initial.shopName);
+  const [country, setCountry] = useState(initial.country || "PK");
   const [currency, setCurrency] = useState(initial.currency);
   const [language, setLanguage] = useState<Lang>(initial.language);
   const [saving, setSaving] = useState(false);
@@ -32,7 +34,7 @@ export function SettingsForm({
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopName, currency, language }),
+        body: JSON.stringify({ shopName, country, currency, language }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -77,6 +79,23 @@ export function SettingsForm({
               <Field label={t.settings.shopName}>
                 <Input required maxLength={120} value={shopName} onChange={(e) => setShopName(e.target.value)} />
               </Field>
+              <Field label={t.settings.country} hint={t.settings.countryHint}>
+                <Select
+                  value={country}
+                  onChange={(e) => {
+                    setCountry(e.target.value);
+                    setCurrency(currencyForCountry(e.target.value));
+                  }}
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name} — {c.currencySymbol} {c.currencyCode}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div className="mt-5">
               <Field label={t.settings.currency} hint={t.settings.currencyHint}>
                 <Input required maxLength={8} value={currency} onChange={(e) => setCurrency(e.target.value)} />
               </Field>

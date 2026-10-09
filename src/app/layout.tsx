@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { LanguageProvider } from "@/components/providers/language-provider";
+import { ThemeProvider, themeInitScript } from "@/components/providers/theme-provider";
 import { ToastProvider } from "@/components/providers/toast-provider";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_LANG, LANG_COOKIE, isLang, type Lang } from "@/lib/i18n";
@@ -33,9 +34,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       ? (user?.language as Lang)
       : DEFAULT_LANG;
 
+  const theme = cookieStore.get("kpos_theme")?.value === "dark" ? "dark" : "";
+
   return (
-    <html lang={lang} dir={lang === "ur" ? "rtl" : "ltr"}>
+    <html lang={lang} dir={lang === "ur" ? "rtl" : "ltr"} className={theme} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -44,9 +48,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body className="text-slate-900 antialiased">
-        <LanguageProvider initialLang={lang} loggedIn={Boolean(user)}>
-          <ToastProvider>{children}</ToastProvider>
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider initialLang={lang} loggedIn={Boolean(user)}>
+            <ToastProvider>{children}</ToastProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

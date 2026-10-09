@@ -91,10 +91,13 @@ export async function getCurrentUser() {
       email: users.email,
       shopName: users.shopName,
       currency: users.currency,
+      country: users.country,
       language: users.language,
       role: users.role,
       suspended: users.suspended,
       accessExpiresAt: users.accessExpiresAt,
+      itemLimit: users.itemLimit,
+      lastSeenAt: users.lastSeenAt,
     })
     .from(users)
     .where(eq(users.id, session.uid))

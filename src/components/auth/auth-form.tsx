@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, ChefHat, Lock, Mail, Store, UserRound, CheckCircle2, UsersRound } from "lucide-react";
+import { ArrowRight, ChefHat, Globe2, Lock, Mail, Store, UserRound, CheckCircle2, UsersRound } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { LanguageToggle } from "@/components/language-toggle";
-import { Button, Card, Field, Input, errorText } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ForgotPasswordModal } from "@/components/auth/forgot-password-modal";
+import { Button, Card, Field, Input, Select, errorText } from "@/components/ui";
+import { COUNTRIES, currencyForCountry, detectCountryFromLocale } from "@/lib/countries";
+import { useEffect } from "react";
 
 type Mode = "login" | "signup";
 
@@ -20,6 +24,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", shopName: "" });
+  const [country, setCountry] = useState("PK");
+  const [forgotOpen, setForgotOpen] = useState(false);
+
+  // Pre-select the visitor's country from the browser locale (PK → Rs, US → $, GB → £, ...).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads browser locale on mount
+    setCountry(detectCountryFromLocale());
+  }, []);
 
   const isSignup = mode === "signup";
   const A = t.auth;
@@ -37,7 +49,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isSignup
-            ? form
+            ? { ...form, country }
             : { email: form.email, password: form.password },
         ),
       });
@@ -117,7 +129,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </span>
             <span className="font-black">{t.appName}</span>
           </Link>
-          <span className="lg:ms-auto">
+          <span className="flex items-center gap-3 lg:ms-auto">
+            <ThemeToggle compact />
             <LanguageToggle compact />
           </span>
         </div>
@@ -163,6 +176,22 @@ export function AuthForm({ mode }: { mode: Mode }) {
                         />
                       </div>
                     </Field>
+                    <Field label={A.country} hint={`${A.countryHint} (${currencyForCountry(country)})`}>
+                      <div className="relative">
+                        <Globe2 className="pointer-events-none absolute start-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                        <Select
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          className="ps-12"
+                        >
+                          {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.name} — {c.currencySymbol} {c.currencyCode}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </Field>
                   </>
                 )}
                 <Field label={A.email}>
@@ -194,6 +223,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
                     />
                   </div>
                 </Field>
+
+                {!isSignup && (
+                  <div className="-mt-2 text-end">
+                    <button
+                      type="button"
+                      onClick={() => setForgotOpen(true)}
+                      className="text-sm font-bold text-orange-600 underline-offset-4 hover:underline"
+                    >
+                      {A.forgotPassword}
+                    </button>
+                  </div>
+                )}
 
                 {error && (
                   <motion.p
@@ -230,6 +271,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </motion.div>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        open={forgotOpen}
+        onClose={() => setForgotOpen(false)}
+        initialEmail={form.email}
+      />
     </div>
   );
 }

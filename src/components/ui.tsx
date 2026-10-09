@@ -283,6 +283,12 @@ export function errorText(code: string | undefined, t: Dict) {
       return t.menu.nameRequired;
     case "INSUFFICIENT":
       return t.pos.insufficient;
+    case "ITEM_LIMIT":
+      return t.menu.limitReached;
+    case "RESET_INVALID":
+      return t.reset.invalidLink;
+    case "EMAIL_NOT_FOUND":
+      return t.reset.emailNotFound;
     case undefined:
       return t.networkError;
     default:

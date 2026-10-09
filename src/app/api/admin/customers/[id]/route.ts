@@ -8,10 +8,11 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * PATCH actions:
- *  - { action: "suspend" }            cut the customer off immediately
- *  - { action: "resume" }             restore access
- *  - { action: "extend", days: 30 }   add days to the subscription
- *  - { action: "revokeAccess" }       clear the subscription entirely
+ *  - { action: "suspend" }              cut the customer off immediately
+ *  - { action: "resume" }               restore access
+ *  - { action: "extend", days: 30 }     add days to the subscription
+ *  - { action: "revokeAccess" }         clear the subscription entirely
+ *  - { action: "setItemLimit", value }  raise/lower the menu item limit (default 500)
  */
 export async function PATCH(request: Request, { params }: RouteContext) {
   const { user, response } = await requireAdmin();
@@ -61,6 +62,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       updates.suspended = false;
       break;
     }
+    case "setItemLimit": {
+      const value = Math.round(Number(body.value));
+      if (!Number.isFinite(value) || value < 1 || value > 100000) {
+        return jsonError("INVALID_LIMIT", 400);
+      }
+      updates.itemLimit = value;
+      break;
+    }
     default:
       return jsonError("INVALID_ACTION", 400);
   }
@@ -73,6 +82,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       id: users.id,
       suspended: users.suspended,
       accessExpiresAt: users.accessExpiresAt,
+      itemLimit: users.itemLimit,
     });
 
   return NextResponse.json({ customer: updated });

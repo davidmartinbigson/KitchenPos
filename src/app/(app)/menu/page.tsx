@@ -25,5 +25,5 @@ export default async function MenuPage() {
     .where(eq(menuItems.userId, user.id))
     .orderBy(asc(menuItems.category), asc(menuItems.name));
 
-  return <MenuManager initialItems={items} currency={user.currency} />;
+  return <MenuManager initialItems={items} currency={user.currency} itemLimit={user.itemLimit} />;
 }

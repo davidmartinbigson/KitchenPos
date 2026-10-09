@@ -13,6 +13,7 @@ export default async function SettingsPage() {
         email: user.email,
         shopName: user.shopName,
         currency: user.currency,
+        country: user.country,
         language: user.language === "ur" ? "ur" : "en",
       }}
     />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChefHat,
@@ -22,7 +22,25 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/components/ui";
+
+/** Pings the server so the restaurant shows "Online" on the master admin. */
+function useHeartbeat() {
+  useEffect(() => {
+    const beat = () => {
+      fetch("/api/heartbeat", { method: "POST" }).catch(() => {});
+    };
+    beat();
+    const timer = setInterval(beat, 45_000);
+    const onFocus = () => beat();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+}
 
 export type ShellUser =
   | {
@@ -54,6 +72,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  useHeartbeat();
 
   const isOwner = user.kind === "owner";
   const navItems = isOwner ? ownerNav : cashierNav;
@@ -170,6 +189,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
           <span className="truncate font-black text-slate-900">{user.shopName}</span>
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle compact />
           <LanguageToggle compact />
           <button
             aria-label="Menu"
@@ -224,14 +244,15 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
       {/* Main */}
       <main className="min-h-screen px-4 pb-28 pt-6 sm:px-6 lg:ps-80 lg:pe-8 lg:pb-12 lg:pt-8">
         <div className="mx-auto max-w-7xl">
-          {isOwner && (
-            <div className="mb-6 hidden items-center justify-between lg:flex">
-              <p className="text-sm font-semibold text-slate-500">
-                {t.dashboard.welcome}, {user.name} 👋
-              </p>
+          <div className="mb-6 hidden items-center justify-between lg:flex">
+            <p className="text-sm font-semibold text-slate-500">
+              {t.dashboard.welcome}, {user.name} 👋
+            </p>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
               <LanguageToggle />
             </div>
-          )}
+          </div>
           <motion.div
             key={pathname}
             initial={{ opacity: 0, y: 14 }}

@@ -1,21 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownCircle,
   BadgeCheck,
   CheckCircle2,
+  CloudOff,
   Minus,
   Plus,
   Printer,
   Receipt as ReceiptIcon,
+  RefreshCw,
   Search,
   ShoppingBasket,
   Sparkles,
   Trash2,
   UtensilsCrossed,
+  Wifi,
   X,
   AlertTriangle,
 } from "lucide-react";
@@ -23,10 +26,11 @@ import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, EmptyState, Input, Modal, cn, errorText } from "@/components/ui";
 import { formatDate, formatMoney, formatNumber, formatTime } from "@/lib/format";
+import { enqueueOrder, loadQueue, removeFromQueue, saveQueue, type QueuedOrder } from "@/lib/offline-queue";
 import type { MenuItemDTO } from "@/lib/types";
 
 type ReceiptData = {
-  orderNumber: number;
+  orderNumber: number | string;
   createdAt: string;
   customerName: string;
   shopName: string;
@@ -36,6 +40,8 @@ type ReceiptData = {
   total: number;
   received: number;
   change: number;
+  /** True when the order was saved on-device while offline. */
+  pendingSync?: boolean;
 };
 
 const QUICK_NOTES = [100, 500, 1000, 2000, 5000];
@@ -66,7 +72,98 @@ export function PosTerminal({
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
+  // ── Offline-first state ──────────────────────────────────────────
+  const [online, setOnline] = useState(true);
+  const [pending, setPending] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
+
   const money = (n: number) => formatMoney(n, currency);
+
+  /** Replay every queued order to the server, in the order they were taken. */
+  const syncQueue = useCallback(async () => {
+    if (syncingRef.current) return;
+    const queue = loadQueue();
+    if (queue.length === 0) {
+      setPending(0);
+      return;
+    }
+    syncingRef.current = true;
+    setSyncing(true);
+
+    let synced = 0;
+    let failed = 0;
+    for (const entry of queue) {
+      try {
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: entry.customerName,
+            amountReceived: entry.amountReceived,
+            items: entry.items,
+          }),
+        });
+        if (res.ok) {
+          removeFromQueue(entry.localId);
+          synced += 1;
+        } else {
+          // Server rejected it (e.g. item removed while offline) — drop it.
+          removeFromQueue(entry.localId);
+          failed += 1;
+        }
+      } catch {
+        // Still no internet — stop and retry on the next trigger.
+        break;
+      }
+    }
+
+    const left = loadQueue().length;
+    setPending(left);
+    syncingRef.current = false;
+    setSyncing(false);
+
+    if (synced > 0 && left === 0) {
+      toast.show(P.syncedAll, "success");
+    } else if (synced > 0) {
+      toast.show(`${synced} ${P.syncedSome}`, "success");
+    }
+    if (failed > 0) {
+      toast.show(P.syncFailed, "error");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Track connectivity + auto-sync when the internet comes back.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- syncs browser connectivity state on mount */
+    setOnline(navigator.onLine);
+    setPending(loadQueue().length);
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    const onOnline = () => {
+      setOnline(true);
+      toast.show(P.youAreOnline, "success");
+      void syncQueue();
+    };
+    const onOffline = () => setOnline(false);
+
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    const timer = setInterval(() => {
+      if (navigator.onLine && loadQueue().length > 0) void syncQueue();
+    }, 30_000);
+
+    // If the page loaded while online with a stale queue, flush it now.
+    if (navigator.onLine) void syncQueue();
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncQueue]);
 
   const categories = useMemo(
     () => ["all", ...Array.from(new Set(items.map((i) => i.category))).sort()],
@@ -136,9 +233,40 @@ export function PosTerminal({
     setReceived(String(base + amount));
   }
 
+  /** Save the order on-device so the cashier can keep selling without internet. */
+  function checkoutOffline(message?: string) {
+    const queue = enqueueOrder({
+      customerName: customer.trim(),
+      amountReceived: receivedNum,
+      items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+    });
+    setPending(queue.length);
+    setReceipt({
+      orderNumber: `OFF-${queue.length}`,
+      createdAt: new Date().toISOString(),
+      customerName: customer.trim(),
+      shopName,
+      sellerName: sellerName ?? "",
+      currency,
+      lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal })),
+      total,
+      received: receivedNum,
+      change: Math.max(0, receivedNum - total),
+      pendingSync: true,
+    });
+    resetOrder();
+    toast.show(message ?? P.orderQueued, "success");
+    setSubmitting(false);
+  }
+
   async function checkout() {
     if (!canSubmit) {
       if (!enoughCash && lines.length > 0) toast.show(P.insufficient, "error");
+      return;
+    }
+    // No internet at all → store on device, keep the counter running.
+    if (!online) {
+      checkoutOffline();
       return;
     }
     setSubmitting(true);
@@ -175,10 +303,10 @@ export function PosTerminal({
       });
       resetOrder();
       toast.show(P.orderSaved, "success");
-    } catch {
-      toast.show(t.networkError, "error");
-    } finally {
       setSubmitting(false);
+    } catch {
+      // Internet died mid-checkout → queue it instead of losing the sale.
+      checkoutOffline();
     }
   }
 
@@ -190,6 +318,46 @@ export function PosTerminal({
         <h1 className="text-3xl font-black tracking-tight text-slate-950">{P.title}</h1>
         <p className="text-slate-600">{P.subtitle}</p>
       </header>
+
+      {/* Offline / pending-sync banner */}
+      <AnimatePresence>
+        {(!online || pending > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1",
+              !online
+                ? "bg-amber-50 text-amber-800 ring-amber-200"
+                : "bg-sky-50 text-sky-800 ring-sky-200",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <span className={cn(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                !online ? "bg-amber-100 text-amber-600" : "bg-sky-100 text-sky-600",
+              )}>
+                {online ? <RefreshCw className={cn("h-5 w-5", syncing && "animate-spin")} /> : <CloudOff className="h-5 w-5" />}
+              </span>
+              <div>
+                <p className="text-sm font-black">
+                  {online ? (syncing ? P.syncing : P.youAreOnline) : P.offlineMode}
+                </p>
+                <p className="text-xs font-semibold opacity-80">
+                  {pending > 0 ? `${formatNumber(pending, lang)} ${P.pendingSync} · ` : ""}
+                  {!online && P.offlineHint}
+                </p>
+              </div>
+            </div>
+            {online && pending > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => void syncQueue()} disabled={syncing}>
+                <Wifi className="h-4 w-4" /> {P.syncing}
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {!hasMenu ? (
         <EmptyState
@@ -565,6 +733,11 @@ export function PosTerminal({
                 {P.orderNo}
                 {receipt.orderNumber}
               </p>
+              {receipt.pendingSync && (
+                <p className="mt-1 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700">
+                  {P.receiptPending}
+                </p>
+              )}
               {receipt.customerName && <p className="text-xs">{receipt.customerName}</p>}
               {receipt.sellerName && (
                 <p className="text-xs text-slate-500">

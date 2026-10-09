@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems } from "@/db/schema";
 import { jsonError, requireActiveUser, requireApp } from "@/lib/api";
@@ -39,6 +39,15 @@ export async function POST(request: Request) {
   const imageData = typeof body.imageData === "string" && body.imageData ? body.imageData : null;
   if (imageData && (!imageData.startsWith("data:image/") || imageData.length > MAX_IMAGE_LENGTH)) {
     return jsonError("IMAGE_INVALID", 400);
+  }
+
+  // Per-restaurant menu item limit (default 500; the master admin can raise it).
+  const [{ total }] = await db
+    .select({ total: count(menuItems.id).mapWith(Number) })
+    .from(menuItems)
+    .where(eq(menuItems.userId, user.id));
+  if (total >= user.itemLimit) {
+    return NextResponse.json({ error: "ITEM_LIMIT", limit: user.itemLimit }, { status: 403 });
   }
 
   const [item] = await db
