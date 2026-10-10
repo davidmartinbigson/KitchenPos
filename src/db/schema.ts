@@ -34,6 +34,11 @@ export const users = pgTable("users", {
   addons: jsonb("addons").notNull().default({}),
   /** Dine-in tables add-on: how many table QR cards to offer. */
   tableCount: integer("table_count").notNull().default(12),
+  /** Receipt branding add-on (printed bill customisation). */
+  receiptHeader: text("receipt_header").notNull().default(""),
+  receiptFooter: text("receipt_footer").notNull().default(""),
+  receiptLogo: text("receipt_logo"),
+  receiptSize: text("receipt_size").notNull().default("80"),
   /** Updated by the app heartbeat; master admin sees the restaurant as Online/Offline. */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

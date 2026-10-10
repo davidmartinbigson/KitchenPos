@@ -12,13 +12,25 @@ export const ADDON_KEYS = [
   "cashShift",
   "profit",
   "whatsappCustomer",
+  "guestTracking",
+  "receiptBrand",
+  "kitchenStats",
 ] as const;
 
 export type AddonKey = (typeof ADDON_KEYS)[number];
 export type AddonsMap = Partial<Record<AddonKey, boolean>>;
 
 /** Add-ons that are live in production. Others stay hidden from Settings for now. */
-export const READY_ADDONS: AddonKey[] = ["discounts", "payments", "stock", "voids"];
+/** Ready & safe to show in Settings. Everything else stays hidden. */
+export const READY_ADDONS: AddonKey[] = [
+  "discounts",
+  "payments",
+  "stock",
+  "voids",
+  "guestTracking",
+  "receiptBrand",
+  "kitchenStats",
+];
 
 export const ORDER_PAYMENT_METHODS = ["cash", "card", "jazzcash", "easypaisa", "bank"] as const;
 

@@ -12,7 +12,13 @@ export default async function PosPage() {
   const scope = await requirePosScope();
 
   const [ownerRow] = await db
-    .select({ addons: users.addons })
+    .select({
+      addons: users.addons,
+      receiptHeader: users.receiptHeader,
+      receiptFooter: users.receiptFooter,
+      receiptLogo: users.receiptLogo,
+      receiptSize: users.receiptSize,
+    })
     .from(users)
     .where(eq(users.id, scope.ownerId));
 
@@ -42,6 +48,12 @@ export default async function PosPage() {
       sellerName={scope.sellerName}
       readOnly={scope.type === "staff"}
       addons={parseAddons(ownerRow?.addons)}
+      branding={{
+        logo: ownerRow?.receiptLogo ?? "",
+        header: ownerRow?.receiptHeader ?? "",
+        footer: ownerRow?.receiptFooter ?? "",
+        size: ownerRow?.receiptSize ?? "80",
+      }}
     />
   );
 }

@@ -58,6 +58,23 @@ export async function PATCH(request: Request) {
     updates.language = body.language;
   }
 
+  // Receipt branding add-on fields — only honoured while the add-on is on.
+  const effAddons =
+    (updates.addons as Record<string, unknown> | undefined) ?? (user.addons as Record<string, unknown> | null) ?? {};
+  if (effAddons.receiptBrand === true) {
+    if (body.receiptHeader !== undefined) updates.receiptHeader = String(body.receiptHeader).slice(0, 160);
+    if (body.receiptFooter !== undefined) updates.receiptFooter = String(body.receiptFooter).slice(0, 160);
+    if (body.receiptLogo !== undefined) {
+      const v = String(body.receiptLogo);
+      if (v === "" ) updates.receiptLogo = null;
+      else if (v.startsWith("data:image/") && v.length < 400_000) updates.receiptLogo = v;
+    }
+    if (body.receiptSize !== undefined) {
+      const v = String(body.receiptSize);
+      if (v === "58" || v === "80") updates.receiptSize = v;
+    }
+  }
+
   const [updated] = await db
     .update(users)
     .set(updates)
@@ -73,6 +90,10 @@ export async function PATCH(request: Request) {
       dailyOrderReset: users.dailyOrderReset,
       addons: users.addons,
       tableCount: users.tableCount,
+      receiptHeader: users.receiptHeader,
+      receiptFooter: users.receiptFooter,
+      receiptLogo: users.receiptLogo,
+      receiptSize: users.receiptSize,
     });
 
   return NextResponse.json({ user: updated });

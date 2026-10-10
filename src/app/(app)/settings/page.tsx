@@ -19,6 +19,10 @@ export default async function SettingsPage() {
         dailyOrderReset: user.dailyOrderReset,
         addons: parseAddons(user.addons),
         tableCount: user.tableCount,
+        receiptHeader: user.receiptHeader,
+        receiptFooter: user.receiptFooter,
+        receiptLogo: user.receiptLogo,
+        receiptSize: user.receiptSize,
       }}
     />
   );

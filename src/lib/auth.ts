@@ -100,6 +100,10 @@ export async function getCurrentUser() {
       dailyOrderReset: users.dailyOrderReset,
       addons: users.addons,
       tableCount: users.tableCount,
+      receiptHeader: users.receiptHeader,
+      receiptFooter: users.receiptFooter,
+      receiptLogo: users.receiptLogo,
+      receiptSize: users.receiptSize,
       lastSeenAt: users.lastSeenAt,
     })
     .from(users)

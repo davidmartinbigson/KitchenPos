@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Check, Globe2, LogOut, Receipt, Save, Store, UserRound, Mail, Coins } from "lucide-react";
+import { Check, Coins, Globe2, LogOut, Mail, Printer, Receipt, Save, Store, UserRound } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/ui";
@@ -27,6 +27,10 @@ export function SettingsForm({
     dailyOrderReset: boolean;
     addons?: Record<string, boolean>;
     tableCount?: number;
+    receiptHeader?: string;
+    receiptFooter?: string;
+    receiptLogo?: string | null;
+    receiptSize?: string;
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -38,7 +42,35 @@ export function SettingsForm({
   const [language, setLanguage] = useState<Lang>(initial.language);
   const [dailyCounter, setDailyCounter] = useState(initial.dailyOrderReset);
   const [addons, setAddons] = useState<Record<string, boolean>>(initial.addons ?? {});
-  const [tableCount, setTableCount] = useState(String(initial.tableCount ?? 12));
+    const [tableCount, setTableCount] = useState(String(initial.tableCount ?? 12));
+  const [receiptHeader, setReceiptHeader] = useState(initial.receiptHeader ?? "");
+  const [receiptFooter, setReceiptFooter] = useState(initial.receiptFooter ?? "");
+  const [receiptLogo, setReceiptLogo] = useState(initial.receiptLogo ?? "");
+  const [receiptSize, setReceiptSize] = useState(initial.receiptSize ?? "80");
+
+  function onReceiptLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 240 / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, w, h);
+        setReceiptLogo(canvas.toDataURL("image/jpeg", 0.85));
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+    e.target.value = "";
+  }
   const [saving, setSaving] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -56,6 +88,10 @@ export function SettingsForm({
           dailyOrderReset: dailyCounter,
           addons,
           tableCount: Number(tableCount) || 12,
+          receiptHeader,
+          receiptFooter,
+          receiptLogo,
+          receiptSize,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -239,6 +275,59 @@ export function SettingsForm({
               </div>
             )}
           </Card>
+
+          {addons.receiptBrand === true && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <Printer className="h-5 w-5 text-orange-500" /> {t.settings.receiptTitle}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">{t.settings.receiptDesc}</p>
+              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">{t.settings.receiptLogoLabel}</label>
+                  <div className="flex items-center gap-3">
+                    <label className="cursor-pointer rounded-xl bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-100">
+                      <input type="file" accept="image/*" className="hidden" onChange={onReceiptLogoFile} />
+                      {t.settings.receiptLogoUpload}
+                    </label>
+                    {receiptLogo && (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={receiptLogo} alt="" className="h-14 w-14 rounded-xl bg-slate-100 object-contain ring-1 ring-slate-200" />
+                        <button
+                          type="button"
+                          onClick={() => setReceiptLogo("")}
+                          className="text-sm font-semibold text-red-500 hover:text-red-600"
+                        >
+                          {t.settings.receiptLogoRemove}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-500">{t.settings.receiptSizeHint}</p>
+                  <div className="mt-3">
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">{t.settings.receiptSizeLabel}</label>
+                    <select
+                      value={receiptSize}
+                      onChange={(e) => setReceiptSize(e.target.value)}
+                      className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+                    >
+                      <option value="80">{t.settings.receiptSize80}</option>
+                      <option value="58">{t.settings.receiptSize58}</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <Field label={t.settings.receiptHeaderLabel} hint={t.settings.receiptHeaderHint}>
+                    <Input value={receiptHeader} onChange={(e) => setReceiptHeader(e.target.value)} maxLength={160} placeholder={t.settings.receiptHeaderPh} />
+                  </Field>
+                  <Field label={t.settings.receiptFooterLabel} hint={t.settings.receiptFooterHint}>
+                    <Input value={receiptFooter} onChange={(e) => setReceiptFooter(e.target.value)} maxLength={160} placeholder={t.settings.receiptFooterPh} />
+                  </Field>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <Card className="p-6 sm:p-8">
             <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">

@@ -25,6 +25,7 @@ type OrderRow = {
   paymentMethod?: string;
   voidedAt?: string | null;
   voidReason?: string;
+  completedAt?: string | null;
   items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number; costPrice?: number }[];
 };
 
@@ -163,6 +164,82 @@ function ShiftPanel({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+type PulseOrder = { createdAt: string; completedAt?: string | null; voidedAt?: string | null };
+
+function KitchenPulse({
+  orders,
+  currency,
+  t,
+}: {
+  orders: PulseOrder[] | null | undefined;
+  currency: string;
+  t: Record<string, string>;
+}) {
+  const S = t as { [k: string]: string };
+  const todayKey = toLocalDateKey(new Date());
+
+  const { avgPrep, doneToday, topHours, slowestPrep } = useMemo(() => {
+    const completed = (orders ?? []).filter((o) => o.completedAt && !o.voidedAt);
+    const preps = completed
+      .map((o) => (new Date(o.completedAt as string).getTime() - new Date(o.createdAt).getTime()) / 60000)
+      .filter((m) => m >= 0 && Number.isFinite(m) && m < 480);
+    const avg = preps.length ? Math.round((preps.reduce((a, b) => a + b, 0) / preps.length) * 10) / 10 : 0;
+
+    const doneT = completed.filter((o) => o.completedAt && toLocalDateKey(new Date(o.completedAt)) === todayKey).length;
+
+    // order-start histogram (today)
+    const hours = new Array<number>(24).fill(0);
+    for (const o of orders ?? []) {
+      const d = new Date(o.createdAt);
+      if (toLocalDateKey(d) === todayKey) hours[d.getHours()]++;
+    }
+    const tops = hours
+      .map((c, h) => ({ c, h }))
+      .filter((x) => x.c > 0)
+      .sort((a, b) => b.c - a.c)
+      .slice(0, 3);
+
+    let slow = 0;
+    for (const o of completed) {
+      if (!o.completedAt) continue;
+      if (toLocalDateKey(new Date(o.createdAt)) !== todayKey) continue;
+      const m = (new Date(o.completedAt).getTime() - new Date(o.createdAt).getTime()) / 60000;
+      if (m > slow && m < 480) slow = m;
+    }
+
+    return { avgPrep: avg, doneToday: doneT, topHours: tops, slowestPrep: Math.round(slow) };
+  }, [orders, todayKey]);
+
+  void currency;
+  const hourLabel = (h: number) =>
+    new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: true }).format(new Date(2026, 0, 1, h));
+
+  return (
+    <div className="mt-5 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-200">
+      <p className="text-xs font-bold uppercase tracking-wider text-sky-700">{S.pulseTitle}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-sky-200">
+          {S.pulseAvg}: {avgPrep > 0 ? `${avgPrep} min` : "—"}
+        </span>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-sky-200">
+          {S.pulseDone}: {doneToday}
+        </span>
+        {slowestPrep > 0 && (
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200">
+            {S.pulseSlow}: {slowestPrep} min
+          </span>
+        )}
+      </div>
+      {topHours.length > 0 && (
+        <p className="mt-2 text-xs font-semibold text-sky-800">
+          {S.pulsePeak}: {topHours.map((x) => `${hourLabel(x.h)} (${x.c})`).join(" · ")}
+        </p>
+      )}
+      {avgPrep === 0 && doneToday === 0 && <p className="mt-2 text-xs text-sky-700/80">{S.pulseEmpty}</p>}
     </div>
   );
 }
@@ -403,6 +480,9 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
         )}
 
         <ShiftPanel addons={addons} lang={lang} money={money} t={S as unknown as Record<string, string>} />
+        {addons.kitchenStats === true && (
+          <KitchenPulse orders={orders} currency={currency} t={S as unknown as Record<string, string>} />
+        )}
 
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           <div>

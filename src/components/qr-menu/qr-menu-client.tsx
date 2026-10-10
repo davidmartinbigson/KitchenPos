@@ -22,6 +22,7 @@ export function QrMenuClient({
   active,
   items,
   tablePrefill = "",
+  guestTracking = false,
 }: {
   restaurantId: number;
   shopName: string;
@@ -29,6 +30,7 @@ export function QrMenuClient({
   active: boolean;
   items: Item[];
   tablePrefill?: string;
+  guestTracking?: boolean;
 }) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState(tablePrefill);
@@ -134,9 +136,21 @@ export function QrMenuClient({
           <p className="mt-3 text-sm text-slate-500">
             Your order has been sent to the kitchen. Please show this number at the counter.
           </p>
+          {guestTracking && (
+            <a
+              href={`/r/${restaurantId}/o/${done.orderNumber}`}
+              className="mt-6 block w-full rounded-xl bg-orange-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700"
+            >
+              🔥 Track your order live
+            </a>
+          )}
           <button
             onClick={() => setDone(null)}
-            className="mt-6 w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            className={`w-full rounded-xl py-3 text-sm font-semibold shadow-sm transition ${
+              guestTracking
+                ? "mt-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                : "mt-6 bg-emerald-600 text-white hover:bg-emerald-700"
+            }`}
           >
             Order more
           </button>

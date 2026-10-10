@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { menuItems, users } from "@/db/schema";
 import { accessState } from "@/lib/access";
 import { parseId } from "@/lib/api";
+import { parseAddons } from "@/lib/addons";
 import { QR_MENU_STRINGS } from "@/lib/qr-public";
 import { QrMenuClient } from "@/components/qr-menu/qr-menu-client";
 
@@ -48,6 +49,7 @@ export default async function QrMenuPage({ params, searchParams }: PageArgs) {
       currency={restaurant.currency}
       active={active}
       tablePrefill={tableLabel ? `${QR_MENU_STRINGS.table} ${tableLabel}` : ""}
+      guestTracking={parseAddons(restaurant.addons).guestTracking === true}
       items={items.map((i) => ({
         id: i.id,
         name: i.name,

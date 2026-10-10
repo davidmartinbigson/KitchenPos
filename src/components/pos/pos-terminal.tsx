@@ -31,6 +31,10 @@ import { enqueueOrder, loadQueue, removeFromQueue, saveQueue, type QueuedOrder }
 import type { MenuItemDTO } from "@/lib/types";
 
 type ReceiptData = {
+  brandLogo?: string;
+  brandHeader?: string;
+  brandFooter?: string;
+  brandSize?: string;
   orderNumber: number | string;
   discount?: number;
   paymentMethod?: string;
@@ -70,6 +74,7 @@ export function PosTerminal({
   sellerName,
   readOnly = false,
   addons = {},
+  branding,
 }: {
   initialItems: MenuItemDTO[];
   currency: string;
@@ -77,9 +82,16 @@ export function PosTerminal({
   sellerName?: string;
   readOnly?: boolean;
   addons?: Record<string, boolean>;
+  branding?: { logo: string; header: string; footer: string; size: string };
 }) {
   const addOn = (key: string) => addons[key] === true;
   const { t, lang } = useI18n();
+  const RECEIPT_BRAND = {
+    brandLogo: branding?.logo || "",
+    brandHeader: branding?.header || "",
+    brandFooter: branding?.footer || "",
+    brandSize: branding?.size || "80",
+  };
   const toast = useToast();
   const P = t.pos;
 
@@ -308,6 +320,7 @@ export function PosTerminal({
       received: receivedNum,
       change: Math.max(0, receivedNum - total),
       pendingSync: true,
+      ...RECEIPT_BRAND,
     });
     resetOrder();
     toast.show(message ?? P.orderQueued, "success");
@@ -368,6 +381,7 @@ export function PosTerminal({
         total: data.order.total,
         received: data.order.amountReceived,
         change: data.order.changeDue,
+        ...RECEIPT_BRAND,
         discount: data.order.discountAmount ?? 0,
         customerPhone: addOn("whatsappCustomer") ? customerPhone.trim() : (data.order as { customerPhone?: string }).customerPhone,
         paymentMethod: data.order.paymentMethod ?? "cash",
@@ -930,7 +944,12 @@ export function PosTerminal({
             className="mx-auto max-w-xs rounded-2xl bg-white p-5 font-mono text-[13px] text-slate-800 shadow-inner ring-1 ring-slate-200"
           >
             <div className="text-center">
+              {receipt.brandLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={receipt.brandLogo} alt="" className="mx-auto mb-2 h-14 w-14 rounded-xl object-contain" />
+              ) : null}
               <p className="text-base font-black uppercase tracking-wide">{receipt.shopName}</p>
+              {receipt.brandHeader ? <p className="text-[11px] font-semibold text-slate-600">{receipt.brandHeader}</p> : null}
               <p className="text-[11px] text-slate-500">
                 {formatDate(receipt.createdAt, lang)} · {formatTime(receipt.createdAt, lang)}
               </p>
@@ -987,6 +1006,9 @@ export function PosTerminal({
               <span>{money(receipt.change)}</span>
             </div>
             <div className="my-3 border-t border-dashed border-slate-300" />
+            {receipt.brandFooter ? (
+              <p className="mb-1 text-center text-[11px] font-semibold text-slate-600">{receipt.brandFooter}</p>
+            ) : null}
             <p className="text-center text-[11px] text-slate-500">{P.thankYou}</p>
           </motion.div>
         )}
@@ -996,7 +1018,7 @@ export function PosTerminal({
       {receipt && (
         <div id="print-sheet" aria-hidden="true">
           {slipGroups(receipt).map((group, index, groups) => (
-            <div key={group.category} className="print-slip">
+            <div key={group.category} className="print-slip" style={receipt.brandSize === "58" ? { width: "58mm" } : undefined}>
               <p className="ps-shop">{receipt.shopName}</p>
               <p className="ps-label">{P.counterSlip}</p>
               <p className="ps-category">{group.category}</p>
@@ -1019,8 +1041,13 @@ export function PosTerminal({
               </p>
             </div>
           ))}
-          <div className="print-slip">
+          <div className="print-slip" style={receipt.brandSize === "58" ? { width: "58mm" } : undefined}>
+            {receipt.brandLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={receipt.brandLogo} alt="" className="ps-logo" />
+            ) : null}
             <p className="ps-shop">{receipt.shopName}</p>
+            {receipt.brandHeader ? <p className="ps-meta">{receipt.brandHeader}</p> : null}
             <p className="ps-label">{P.customerCopy}</p>
             <p className="ps-meta">
               {P.orderNo}
@@ -1056,6 +1083,7 @@ export function PosTerminal({
               <span>{money(receipt.change)}</span>
             </div>
             <div className="ps-div" />
+            {receipt.brandFooter ? <p className="ps-meta">{receipt.brandFooter}</p> : null}
             <p className="ps-meta">{P.thankYou}</p>
           </div>
         </div>
