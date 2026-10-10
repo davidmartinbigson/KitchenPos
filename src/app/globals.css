@@ -338,6 +338,10 @@ html.dark .hover\:bg-rose-100:hover {
 html.dark .hover\:text-slate-900:hover {
   color: #f1f5f9;
 }
+/* Sidebar/nav hover pill: dark glass instead of blinding white in dark mode */
+html.dark .hover\:bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
 
 /* Selected sidebar item glow & inputs stay readable */
 html.dark input,

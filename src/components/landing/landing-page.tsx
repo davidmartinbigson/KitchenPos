@@ -353,7 +353,7 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
           <p className="mx-auto mt-3 max-w-xl text-lg text-orange-50">{L.ctaSubtitle}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href={loggedIn ? "/dashboard" : "/signup"}>
-              <Button size="lg" className="bg-white !text-orange-600 shadow-xl hover:!brightness-100 hover:bg-orange-50">
+              <Button size="lg" className="bg-white bg-none !text-orange-600 shadow-xl ring-0 hover:bg-orange-50 hover:!brightness-100">
                 {loggedIn ? t.openDashboard : t.getStarted}
               </Button>
             </Link>

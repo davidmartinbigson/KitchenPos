@@ -10,11 +10,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Kitchen POS · Open-source restaurant point of sale",
+    default: "Kitchen POS · Restaurant point of sale",
     template: "%s · Kitchen POS",
   },
   description:
-    "Open-source restaurant POS: create your kitchen, add menu items with pictures and prices, take orders, calculate change and track daily sales. English & Urdu.",
+    "Restaurant POS: create your kitchen, add menu items with pictures and prices, take orders, calculate change and track daily sales. English & Urdu.",
 };
 
 export const viewport: Viewport = {
