@@ -402,7 +402,7 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
           </div>
         )}
 
-        <ShiftPanel addons={addons} lang={lang} money={money} t={S} />
+        <ShiftPanel addons={addons} lang={lang} money={money} t={S as unknown as Record<string, string>} />
 
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           <div>

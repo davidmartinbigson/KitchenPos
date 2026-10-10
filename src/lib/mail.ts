@@ -124,3 +124,61 @@ export async function sendWelcomeEmail(to: string, name: string) {
   });
   return true;
 }
+
+export async function sendDailySummaryEmail(opts: {
+  to: string;
+  shopName: string;
+  currency: string;
+  revenue: number;
+  orderCount: number;
+  expenseTotal: number;
+  pendingOrders: number;
+}) {
+  const { to, shopName, currency, revenue, orderCount, expenseTotal, pendingOrders } = opts;
+  const profit = revenue - expenseTotal;
+  const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const transport = createTransporter();
+  if (!transport) return false;
+
+  const row = (label: string, value: string, color: string) => `
+    <tr>
+      <td style="padding:14px 20px;font-size:14px;color:#64748b;font-weight:600">${label}</td>
+      <td align="right" style="padding:14px 20px;font-size:18px;font-weight:800;color:${color};font-variant-numeric:tabular-nums">${value}</td>
+    </tr>`;
+
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
+  <div style="max-width:520px;margin:0 auto;padding:32px 16px">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:24px;padding:28px 24px;text-align:center">
+      <div style="font-size:36px">📊</div>
+      <h1 style="margin:12px 0 0;color:#fff;font-size:22px;font-weight:800">Daily Summary — ${shopName}</h1>
+      <p style="margin:6px 0 0;color:#94a3b8;font-size:13px">${dateStr}</p>
+    </div>
+    <div style="background:#fff;border-radius:24px;margin-top:16px;overflow:hidden;border:1px solid #e2e8f0">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+        ${row("Revenue today", `${currency} ${revenue.toLocaleString()}`, "#0f172a")}
+        ${row("Orders today", String(orderCount), "#0f172a")}
+        ${row("Expenses today", `− ${currency} ${expenseTotal.toLocaleString()}`, "#dc2626")}
+        ${row("Net (revenue − expenses)", `${currency} ${profit.toLocaleString()}`, profit >= 0 ? "#059669" : "#dc2626")}
+        ${row("Open orders right now", String(pendingOrders), "#d97706")}
+      </table>
+    </div>
+    <div style="margin-top:16px;background:linear-gradient(135deg,#f97316,#f43f5e);border-radius:24px;padding:22px;text-align:center">
+      <p style="margin:0;color:#fff;font-size:14px;font-weight:700">Open your dashboard for the full picture</p>
+    </div>
+    <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:20px">© 2026 Developed By Shayan Ali · Kitchen POS</p>
+  </div></body></html>`;
+
+  try {
+    await transport.sendMail({
+      from: fromAddress(),
+      to,
+      subject: `📊 ${shopName} — daily summary (${dateStr})`,
+      html,
+      text: `${shopName} daily summary ${dateStr}\nRevenue: ${currency} ${revenue}\nOrders: ${orderCount}\nExpenses: ${currency} ${expenseTotal}\nNet: ${currency} ${profit}\nOpen orders: ${pendingOrders}`,
+    });
+    return true;
+  } catch (err) {
+    console.error("daily-summary mail failed", err);
+    return false;
+  }
+}

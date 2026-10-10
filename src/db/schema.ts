@@ -156,6 +156,8 @@ export const orders = pgTable(
   voidReason: text("void_reason").notNull().default(""),
   /** Customer WhatsApp add-on: phone in international format for one-tap updates. */
   customerPhone: text("customer_phone").notNull().default(""),
+  /** Set when the kitchen marks all items ready/served — used for hourly heatmap & open-order age. */
+  completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("orders_user_created_idx").on(table.userId, table.createdAt)],

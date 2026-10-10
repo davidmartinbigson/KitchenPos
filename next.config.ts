@@ -1,21 +1,33 @@
 import type { NextConfig } from "next";
 
+// CSP kept permissive enough to run inside iframe previews and any proxy/host,
+// while still upgrading security posture over no header at all.
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https:",
+  "frame-src 'self'",
+  "media-src 'self' blob:",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 const nextConfig: NextConfig = {
-  // Produces a self-contained production server in .next/standalone so the
-  // app can be deployed to any VPS (Hostinger etc.) with just Node.js.
-  output: "standalone",
-  // Allow the dev server to be reached through preview tunnels / proxies
-  // (Arena e2b preview, Cloudflare quick tunnels) — no effect in production.
-  allowedDevOrigins: [
-    "*.e2b.app",
-    "*.trycloudflare.com",
-    "place-moore-rocks-tracking.trycloudflare.com",
-  ],
-  // Bundle the welcome tutorial GIF into the signup serverless function
-  // so welcome emails can attach it on any host (incl. Vercel).
-  outputFileTracingIncludes: {
-    "/api/auth/signup/route": ["./public/assets/welcome-tutorial.gif"],
-  },
+  ...(process.env.HOSTINGER_STATIC === "1"
+    ? { output: "export", assetPrefix: "./" }
+    : {
+        async headers() {
+          return [{ source: "/(.*)", headers: securityHeaders }];
+        },
+      }),
 };
 
 export default nextConfig;

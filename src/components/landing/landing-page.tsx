@@ -181,6 +181,9 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
                 <Link href="/login" className="hidden sm:block">
                   <Button variant="ghost">{t.login}</Button>
                 </Link>
+                <Link href="/features" className="hidden sm:block">
+                  <Button variant="ghost">{L.featuresNav}</Button>
+                </Link>
                 <Link href="/signup">
                   <Button size="md">{t.signup}</Button>
                 </Link>
@@ -340,6 +343,31 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
         </div>
       </section>
 
+      {/* Why it fits */}
+      <section className="mx-auto max-w-7xl px-5 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="rounded-[2.5rem] bg-gradient-to-br from-orange-600 via-rose-500 to-amber-500 p-[1px] shadow-2xl shadow-orange-500/25"
+        >
+          <div className="rounded-[2.5rem] bg-white/90 px-8 py-12 text-center backdrop-blur md:px-16 md:py-16">
+            <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">{L.whyTitle}</h2>
+            <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-slate-600">{L.whyText1}</p>
+            <p className="mx-auto mt-3 max-w-3xl text-lg leading-relaxed text-slate-600">{L.whyText2}</p>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <span className="rounded-full bg-emerald-50 px-4 py-1.5 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">✓ Offline-capable</span>
+              <span className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-bold text-orange-700 ring-1 ring-orange-200">✓ QR self-ordering included</span>
+              <span className="rounded-full bg-violet-50 px-4 py-1.5 text-sm font-bold text-violet-700 ring-1 ring-violet-200">✓ 9 optional add-ons</span>
+            </div>
+            <Link href="/features">
+              <Button size="lg" className="mt-9 shadow-lg shadow-orange-500/40">{L.featuresNav}</Button>
+            </Link>
+          </div>
+        </motion.div>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto max-w-5xl px-5 pb-20 text-center">
         <motion.div
@@ -365,6 +393,10 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
         <div className="flex flex-wrap items-center justify-center gap-2 font-semibold text-slate-700">
           <span>{t.appName}</span> · <LanguageToggle compact className="ms-2 align-middle" />
         </div>
+        <p className="mt-2">
+          <Link href="/features" className="mx-2 underline underline-offset-2 hover:text-orange-600">{L.featuresNav}</Link>·
+          <Link href="/login" className="mx-2 underline underline-offset-2 hover:text-orange-600">{t.login}</Link>
+        </p>
         <p className="mt-2">{L.footer}</p>
       </footer>
     </div>
