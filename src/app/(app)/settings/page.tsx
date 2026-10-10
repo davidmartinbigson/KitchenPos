@@ -15,6 +15,7 @@ export default async function SettingsPage() {
         currency: user.currency,
         country: user.country,
         language: user.language === "ur" ? "ur" : "en",
+        dailyOrderReset: user.dailyOrderReset,
       }}
     />
   );

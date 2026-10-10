@@ -41,6 +41,9 @@ export async function PATCH(request: Request) {
     // Changing country auto-updates the symbol unless one was sent explicitly.
     if (body.currency === undefined) updates.currency = currencyForCountry(String(body.country));
   }
+  if (body.dailyOrderReset !== undefined) {
+    updates.dailyOrderReset = Boolean(body.dailyOrderReset);
+  }
   if (body.language !== undefined) {
     if (!isLang(body.language)) return jsonError("INVALID_LANGUAGE", 400);
     updates.language = body.language;
@@ -58,6 +61,7 @@ export async function PATCH(request: Request) {
       currency: users.currency,
       country: users.country,
       language: users.language,
+      dailyOrderReset: users.dailyOrderReset,
     });
 
   return NextResponse.json({ user: updated });

@@ -97,6 +97,7 @@ export async function getCurrentUser() {
       suspended: users.suspended,
       accessExpiresAt: users.accessExpiresAt,
       itemLimit: users.itemLimit,
+      dailyOrderReset: users.dailyOrderReset,
       lastSeenAt: users.lastSeenAt,
     })
     .from(users)

@@ -295,7 +295,15 @@ export function PosTerminal({
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
-        order?: { orderNumber: number; createdAt: string; total: number; amountReceived: number; changeDue: number };
+        order?: {
+          orderNumber: number;
+          dailyOrderNo?: number;
+          createdAt: string;
+          total: number;
+          amountReceived: number;
+          changeDue: number;
+        };
+        displayOrderNo?: number;
       };
       if (!res.ok || !data.order) {
         toast.show(errorText(data.error, t), "error");
@@ -303,7 +311,7 @@ export function PosTerminal({
         return;
       }
       setReceipt({
-        orderNumber: data.order.orderNumber,
+        orderNumber: data.displayOrderNo ?? data.order.orderNumber,
         createdAt: data.order.createdAt,
         customerName: customer.trim(),
         shopName,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, gte, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders, users } from "@/db/schema";
 import { jsonError, parseId } from "@/lib/api";
@@ -72,11 +72,20 @@ export async function POST(request: Request, { params }: RouteContext) {
       orderBy: (t, { desc }) => [desc(t.orderNumber)],
     });
     const orderNumber = (latest?.orderNumber ?? 0) + 1;
+    const PKT_MIN = 300;
+    const localNow = new Date(Date.now() + PKT_MIN * 60_000);
+    const dayStartMs =
+      Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate()) - PKT_MIN * 60_000;
+    const [{ value: todayCount }] = await tx
+      .select({ value: count(orders.id) })
+      .from(orders)
+      .where(and(eq(orders.userId, userId), gte(orders.createdAt, new Date(dayStartMs))));
     const [order] = await tx
       .insert(orders)
       .values({
         userId,
         orderNumber,
+        dailyOrderNo: Number(todayCount ?? 0) + 1,
         customerName,
         takenBy: "QR Order",
         subtotal: total,
@@ -85,7 +94,12 @@ export async function POST(request: Request, { params }: RouteContext) {
         changeDue: 0,
         itemCount,
       })
-      .returning({ id: orders.id, orderNumber: orders.orderNumber, total: orders.total });
+      .returning({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        dailyOrderNo: orders.dailyOrderNo,
+        total: orders.total,
+      });
     await tx.insert(orderItems).values(
       priced.map((l) => ({
         orderId: order.id,
@@ -100,5 +114,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     return order;
   });
 
-  return NextResponse.json({ orderNumber: result.orderNumber, total: result.total }, { status: 201 });
+  const displayOrderNo = restaurant.dailyOrderReset ? result.dailyOrderNo : result.orderNumber;
+  return NextResponse.json({ orderNumber: displayOrderNo, total: result.total }, { status: 201 });
 }

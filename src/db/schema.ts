@@ -27,6 +27,8 @@ export const users = pgTable("users", {
   accessExpiresAt: timestamp("access_expires_at", { withTimezone: true }),
   /** Max menu items this shop may list. Master admin can raise it per restaurant. */
   itemLimit: integer("item_limit").notNull().default(500),
+  /** Owner option: receipts number orders from 1 each day (daily receipt counter). */
+  dailyOrderReset: boolean("daily_order_reset").notNull().default(false),
   /** Updated by the app heartbeat; master admin sees the restaurant as Online/Offline. */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -130,6 +132,8 @@ export const orders = pgTable(
     amountReceived: integer("amount_received").notNull().default(0),
     changeDue: integer("change_due").notNull().default(0),
     itemCount: integer("item_count").notNull().default(0),
+  /** Same-day order sequence (PKT day) shown on receipts when the daily counter is enabled. */
+  dailyOrderNo: integer("daily_order_no").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("orders_user_created_idx").on(table.userId, table.createdAt)],

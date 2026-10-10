@@ -251,7 +251,7 @@ export const en = {
     noDays: "No sales have been recorded yet.",
     details: "Order details",
     grandTotal: "Grand total",
-    dayClose: "Day close — Aaj ki Bachat",
+    dayClose: "Day close summary",
     saleLabel: "Sale",
     expenseLabel: "Expenses",
     bachatLabel: "Savings",
@@ -453,6 +453,8 @@ export const en = {
     email: "Email",
     name: "Name",
     dangerTitle: "Session",
+    dailyCounterTitle: "Daily order counter",
+    dailyCounterDesc: "Receipt order numbers restart from 1 every day, so you always know how many orders you took today. Off by default.",
   },
 };
 
@@ -908,6 +910,8 @@ export const ur: Dict = {
     email: "ای میل",
     name: "نام",
     dangerTitle: "سیشن",
+    dailyCounterTitle: "روزانہ آرڈر نمبر",
+    dailyCounterDesc: "رسید پر آرڈر نمبر ہر دن 1 سے دوبارہ شروع ہوں گے، تاکہ آج کے کل آرڈرز کا فوراً پتہ چل جائے۔ ڈیفالٹ: بند۔",
   },
 };
 

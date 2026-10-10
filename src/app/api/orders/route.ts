@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
 import { db } from "@/db";
-import { menuItems, orderItems, orders } from "@/db/schema";
+import { menuItems, orderItems, orders, users } from "@/db/schema";
 import { jsonError, requireActiveUser, requireApp } from "@/lib/api";
 
 type IncomingLine = { menuItemId: unknown; quantity: unknown };
@@ -33,6 +33,11 @@ export async function POST(request: Request) {
   const guard = await requireApp(["owner", "cashier"]);
   if (!guard.ok) return guard.response;
   const { session, ownerId } = guard;
+
+  const [ownerPref] = await db
+    .select({ dailyOrderReset: users.dailyOrderReset })
+    .from(users)
+    .where(eq(users.id, ownerId));
 
   const saleByStaff = session.type === "staff";
   const staffSale = saleByStaff
@@ -94,6 +99,16 @@ export async function POST(request: Request) {
         .from(orders)
         .where(eq(orders.userId, ownerId));
 
+      // Same-day count (Asia/Karachi day) for the optional daily receipt counter.
+      const PKT_MIN = 300;
+      const localNow = new Date(Date.now() + PKT_MIN * 60_000);
+      const dayStartMs =
+        Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate()) - PKT_MIN * 60_000;
+      const [{ value: todayCount }] = await tx
+        .select({ value: count(orders.id) })
+        .from(orders)
+        .where(and(eq(orders.userId, ownerId), gte(orders.createdAt, new Date(dayStartMs))));
+
       const [order] = await tx
         .insert(orders)
         .values({
@@ -101,6 +116,7 @@ export async function POST(request: Request) {
           staffId: staffSale.staffId,
           takenBy: staffSale.takenBy,
           orderNumber: (lastNumber ?? 0) + 1,
+          dailyOrderNo: Number(todayCount ?? 0) + 1,
           customerName,
           subtotal,
           total: subtotal,
@@ -115,7 +131,13 @@ export async function POST(request: Request) {
       return order;
     });
 
-    return NextResponse.json({ order: result }, { status: 201 });
+    return NextResponse.json(
+      {
+        order: result,
+        displayOrderNo: ownerPref?.dailyOrderReset ? result.dailyOrderNo : result.orderNumber,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "ITEM_UNAVAILABLE") return jsonError("ITEM_UNAVAILABLE", 409);

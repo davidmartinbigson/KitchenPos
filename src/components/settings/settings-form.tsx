@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Check, Globe2, LogOut, Save, Store, UserRound, Mail, Coins } from "lucide-react";
+import { Check, Globe2, LogOut, Receipt, Save, Store, UserRound, Mail, Coins } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/ui";
@@ -16,7 +16,15 @@ const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
 export function SettingsForm({
   initial,
 }: {
-  initial: { name: string; email: string; shopName: string; currency: string; country: string; language: Lang };
+  initial: {
+    name: string;
+    email: string;
+    shopName: string;
+    currency: string;
+    country: string;
+    language: Lang;
+    dailyOrderReset: boolean;
+  };
 }) {
   const { t, lang, setLang } = useI18n();
   const toast = useToast();
@@ -25,6 +33,7 @@ export function SettingsForm({
   const [country, setCountry] = useState(initial.country || "PK");
   const [currency, setCurrency] = useState(initial.currency);
   const [language, setLanguage] = useState<Lang>(initial.language);
+  const [dailyCounter, setDailyCounter] = useState(initial.dailyOrderReset);
   const [saving, setSaving] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -34,7 +43,7 @@ export function SettingsForm({
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopName, country, currency, language }),
+        body: JSON.stringify({ shopName, country, currency, language, dailyOrderReset: dailyCounter }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -116,6 +125,34 @@ export function SettingsForm({
                   {c}
                 </button>
               ))}
+            </div>
+          </Card>
+
+          <Card className="p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                  <Receipt className="h-5 w-5 text-orange-500" /> {t.settings.dailyCounterTitle}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">{t.settings.dailyCounterDesc}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={dailyCounter}
+                onClick={() => setDailyCounter((v) => !v)}
+                className={cn(
+                  "relative h-7 w-12 shrink-0 rounded-full transition",
+                  dailyCounter ? "bg-emerald-500" : "bg-slate-300",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all",
+                    dailyCounter ? "start-[22px]" : "start-0.5",
+                  )}
+                />
+              </button>
             </div>
           </Card>
 
