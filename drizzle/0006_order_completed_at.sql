@@ -1,10 +1,8 @@
 ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "completed_at" timestamp with time zone;
 --> statement-breakpoint
--- Backfill: orders whose every item status is 'ready'/'served' are complete.
+-- Backfill: orders whose items are all ready/served are complete; use created_at as best known timestamp.
 UPDATE "orders" o
-SET "completed_at" = (
-  SELECT MAX(oi.updated_at) FROM "order_items" oi WHERE oi.order_id = o.id
-)
+SET "completed_at" = o."created_at"
 WHERE "completed_at" IS NULL
   AND NOT EXISTS (
     SELECT 1 FROM "order_items" oi
