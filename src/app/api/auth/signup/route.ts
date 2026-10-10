@@ -9,6 +9,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth";
 import { jsonError } from "@/lib/api";
+import { sendWelcomeEmail, supportEmail } from "@/lib/mail";
 import { currencyForCountry, isCountryCode, DEFAULT_COUNTRY } from "@/lib/countries";
 
 export async function POST(request: Request) {
@@ -57,7 +58,17 @@ export async function POST(request: Request) {
       language: users.language,
     });
 
-  const response = NextResponse.json({ user: created }, { status: 201 });
+  let welcomeEmailSent = false;
+  try {
+    welcomeEmailSent = await sendWelcomeEmail(created.email, created.name);
+  } catch {
+    // Email must never block signups (e.g. SMTP down/misconfigured).
+  }
+
+  const response = NextResponse.json(
+    { user: created, supportEmail: supportEmail(), welcomeEmailSent },
+    { status: 201 },
+  );
   response.cookies.set(SESSION_COOKIE, createSessionToken(created.id), sessionCookieOptions);
   return response;
 }

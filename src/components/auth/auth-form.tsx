@@ -26,6 +26,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", shopName: "" });
   const [country, setCountry] = useState("PK");
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [welcome, setWelcome] = useState<{ name: string; supportEmail: string; emailed: boolean } | null>(null);
 
   // Pre-select the visitor's country from the browser locale (PK → Rs, US → $, GB → £, ...).
   useEffect(() => {
@@ -55,9 +56,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
-        user?: { language: string };
+        user?: { language: string; name?: string };
         staff?: boolean;
         role?: string;
+        supportEmail?: string;
+        welcomeEmailSent?: boolean;
       };
       if (!res.ok) {
         setError(errorText(data.error, t));
@@ -67,7 +70,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
       if (data.user?.language === "ur" || data.user?.language === "en") {
         setLang(data.user.language);
       }
-      toast.show(isSignup ? A.signupTitle : A.loginTitle, "success");
+      if (isSignup) {
+        setWelcome({
+          name: data.user?.name || form.name,
+          supportEmail: data.supportEmail || "",
+          emailed: Boolean(data.welcomeEmailSent),
+        });
+        setLoading(false);
+        return;
+      }
+      toast.show(A.loginTitle, "success");
       if (data.staff) {
         router.push(data.role === "chef" ? "/kitchen" : "/pos");
       } else {
@@ -148,6 +160,52 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </h1>
             <p className="mt-2 text-slate-600">{isSignup ? A.signupSubtitle : A.loginSubtitle}</p>
 
+            {welcome ? (
+              <Card className="mt-8 p-6 text-center sm:p-8">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/30">
+                  <CheckCircle2 className="h-9 w-9" />
+                </div>
+                <h2 className="mt-4 text-2xl font-black text-slate-950">{A.welcomeTitle}</h2>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  {A.welcomeSubtitle}
+                </p>
+                {welcome.name && (
+                  <p className="mt-0.5 text-xs text-slate-400">{welcome.name}</p>
+                )}
+                <div className="mx-auto mt-5 max-w-sm space-y-2.5 rounded-2xl bg-slate-50 p-4 text-start ring-1 ring-slate-100">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    {A.welcomeNext}
+                  </p>
+                  <p className="text-sm font-semibold text-slate-700">1. {A.welcomeStep1}</p>
+                  <p className="text-sm font-semibold text-slate-700">2. {A.welcomeStep2}</p>
+                  <p className="text-sm font-semibold text-slate-700">3. {A.welcomeStep3}</p>
+                </div>
+                {welcome.supportEmail && (
+                  <p className="mt-4 text-sm text-slate-600">
+                    {A.welcomeNoKey}{" "}
+                    <a
+                      href={"mailto:" + welcome.supportEmail}
+                      className="font-bold text-orange-600 underline-offset-4 hover:underline"
+                    >
+                      {welcome.supportEmail}
+                    </a>
+                  </p>
+                )}
+                {welcome.emailed && (
+                  <p className="mt-2 text-xs text-slate-400">{A.welcomeEmailNote}</p>
+                )}
+                <Button
+                  size="lg"
+                  className="mt-6 w-full"
+                  onClick={() => {
+                    router.push("/dashboard");
+                    router.refresh();
+                  }}
+                >
+                  {A.welcomeCta} <ArrowRight className="h-5 w-5 rtl:rotate-180" />
+                </Button>
+              </Card>
+            ) : (
             <Card className="mt-8 p-6 sm:p-8">
               <form onSubmit={onSubmit} className="space-y-5">
                 {isSignup && (
@@ -252,6 +310,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 </Button>
               </form>
             </Card>
+            )}
 
             <p className="mt-6 text-center text-sm text-slate-600">
               {isSignup ? A.haveAccount : A.noAccount}{" "}

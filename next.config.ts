@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
     "*.trycloudflare.com",
     "place-moore-rocks-tracking.trycloudflare.com",
   ],
+  // Bundle the welcome tutorial GIF into the signup serverless function
+  // so welcome emails can attach it on any host (incl. Vercel).
+  outputFileTracingIncludes: {
+    "/api/auth/signup/route": ["./public/assets/welcome-tutorial.gif"],
+  },
 };
 
 export default nextConfig;
