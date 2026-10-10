@@ -64,15 +64,16 @@ export async function GET(request: Request) {
       .from(expenses)
       .where(and(eq(expenses.userId, owner.id), gte(expenses.createdAt, from), lt(expenses.createdAt, to)));
 
-    if (dayOrders.length === 0 && dayExpenses.length === 0) {
+    const activeOrders = dayOrders.filter((o) => !o.voidedAt);
+    if (activeOrders.length === 0 && dayExpenses.length === 0) {
       skipped.push(owner.email);
       continue; // nothing happened today — don't send a pointless email
     }
 
-    const sale = dayOrders.reduce((s, o) => s + o.total, 0);
+    const sale = activeOrders.reduce((s, o) => s + o.total, 0);
     const expensesTotal = dayExpenses.reduce((s, e) => s + e.amount, 0);
     const tally = new Map<string, number>();
-    for (const o of dayOrders) {
+    for (const o of activeOrders) {
       for (const it of o.items) tally.set(it.name, (tally.get(it.name) ?? 0) + it.quantity);
     }
     let topItem: { name: string; qty: number } | null = null;
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
       const ok = await sendDailySummaryEmail(owner.email, owner.shopName, {
         dateLabel,
         sale,
-        ordersCount: dayOrders.length,
+        ordersCount: activeOrders.length,
         expensesTotal,
         bachat: sale - expensesTotal,
         topItem,

@@ -9,6 +9,7 @@ import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/ui";
 import type { Lang } from "@/lib/i18n";
+import { ADDON_KEYS, READY_ADDONS } from "@/lib/addons";
 import { COUNTRIES, currencyForCountry } from "@/lib/countries";
 
 const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
@@ -24,6 +25,7 @@ export function SettingsForm({
     country: string;
     language: Lang;
     dailyOrderReset: boolean;
+    addons?: Record<string, boolean>;
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -34,6 +36,7 @@ export function SettingsForm({
   const [currency, setCurrency] = useState(initial.currency);
   const [language, setLanguage] = useState<Lang>(initial.language);
   const [dailyCounter, setDailyCounter] = useState(initial.dailyOrderReset);
+  const [addons, setAddons] = useState<Record<string, boolean>>(initial.addons ?? {});
   const [saving, setSaving] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -43,7 +46,14 @@ export function SettingsForm({
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopName, country, currency, language, dailyOrderReset: dailyCounter }),
+        body: JSON.stringify({
+          shopName,
+          country,
+          currency,
+          language,
+          dailyOrderReset: dailyCounter,
+          addons,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -153,6 +163,62 @@ export function SettingsForm({
                   )}
                 />
               </button>
+            </div>
+          </Card>
+
+          <Card className="p-6 sm:p-8">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Receipt className="h-5 w-5 text-orange-500" /> {t.settings.addonsTitle}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{t.settings.addonsDesc}</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {ADDON_KEYS.map((key) => {
+                const ready = READY_ADDONS.includes(key as (typeof READY_ADDONS)[number]);
+                const meta = (t.settings.addonList as Record<string, { name: string; desc: string }>)[key];
+                const on = addons[key] === true;
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "flex items-start justify-between gap-3 rounded-2xl p-3.5 ring-1 transition",
+                      on ? "bg-emerald-50 ring-emerald-200" : "bg-slate-50 ring-slate-200",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                        {meta?.name ?? key}
+                        {!ready && (
+                          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
+                            {t.settings.addonComingSoon}
+                          </span>
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">{meta?.desc}</p>
+                    </div>
+                    {ready ? (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={on}
+                        onClick={() => setAddons((prev) => ({ ...prev, [key]: !on }))}
+                        className={cn(
+                          "relative h-6 w-11 shrink-0 rounded-full transition",
+                          on ? "bg-emerald-500" : "bg-slate-300",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                            on ? "start-[22px]" : "start-0.5",
+                          )}
+                        />
+                      </button>
+                    ) : (
+                      <span className="h-6 w-11 shrink-0 rounded-full bg-slate-200" />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </Card>
 

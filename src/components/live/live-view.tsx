@@ -11,6 +11,7 @@ type OrderRow = {
   orderNumber: number;
   total: number;
   itemCount: number;
+  voidedAt?: string | null;
   createdAt: string;
   takenBy: string | null;
   items: OrderItem[];
@@ -84,8 +85,8 @@ export function LiveView({ currency }: { currency: string }) {
   }, [load]);
 
   const money = (n: number) => `${currency} ${n.toLocaleString()}`;
-  const sale = (orders ?? []).reduce((s, o) => s + o.total, 0);
-  const orderCount = (orders ?? []).length;
+  const sale = (orders ?? []).reduce((s, o) => (o.voidedAt ? s : s + o.total), 0);
+  const orderCount = (orders ?? []).filter((o) => !o.voidedAt).length;
   const expTotal = (expenses ?? []).reduce((s, e) => s + e.amount, 0);
   const bachat = sale - expTotal;
 
@@ -99,7 +100,7 @@ export function LiveView({ currency }: { currency: string }) {
     return best;
   })();
 
-  const recent = [...(orders ?? [])].sort(
+  const recent = [...(orders ?? [])].filter((o) => !o.voidedAt).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   ).slice(0, 10);
   const timeFmt = (iso: string) =>

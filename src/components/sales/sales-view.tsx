@@ -21,6 +21,10 @@ type OrderRow = {
   changeDue: number;
   itemCount: number;
   createdAt: string;
+  discountAmount?: number;
+  paymentMethod?: string;
+  voidedAt?: string | null;
+  voidReason?: string;
   items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number }[];
 };
 
@@ -33,7 +37,7 @@ function dayRange(key: string) {
   return { from: start.toISOString(), to: end.toISOString() };
 }
 
-export function SalesView({ currency }: { currency: string }) {
+export function SalesView({ currency, addons = {} }: { currency: string; addons?: Record<string, boolean> }) {
   const { t, lang } = useI18n();
   const S = t.sales;
   const money = (n: number) => formatMoney(n, currency);
@@ -84,7 +88,14 @@ export function SalesView({ currency }: { currency: string }) {
   }, [daily]);
 
   const maxDay = Math.max(1, ...(daily?.map((d) => d.revenue) ?? [1]));
-  const dayRevenue = orders?.reduce((s, o) => s + o.total, 0) ?? 0;
+  const dayRevenue = orders?.reduce((s, o) => (o.voidedAt ? s : s + o.total), 0) ?? 0;
+  const paySplit = (orders ?? [])
+    .filter((o) => !o.voidedAt)
+    .reduce((m: Record<string, number>, o) => {
+      const k = o.paymentMethod ?? "cash";
+      m[k] = (m[k] ?? 0) + o.total;
+      return m;
+    }, {});
   const dayOrderCount = orders?.length ?? 0;
 
   const expTotal = (expenses ?? []).reduce((s, e) => s + e.amount, 0);
@@ -108,6 +119,21 @@ export function SalesView({ currency }: { currency: string }) {
       }
     } finally {
       setExpSaving(false);
+    }
+  };
+
+  const voidOrder = async (id: number) => {
+    const reason = window.prompt(S.voidPrompt) ?? null;
+    if (reason === null) return;
+    const res = await fetch(`/api/orders/${id}/void`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) {
+      setOrders((prev) =>
+        (prev ?? []).map((o) => (o.id === id ? { ...o, voidedAt: new Date().toISOString(), voidReason: reason } : o)),
+      );
     }
   };
 
@@ -211,6 +237,20 @@ export function SalesView({ currency }: { currency: string }) {
             </p>
           </div>
         </div>
+
+        {Object.keys(paySplit).length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">{S.paySplitTitle}</span>
+            {Object.entries(paySplit).map(([method, sum]) => (
+              <span
+                key={method}
+                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+              >
+                {S.methods[method as keyof typeof S.methods] ?? method} · {money(sum)}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           <div>
@@ -433,10 +473,27 @@ export function SalesView({ currency }: { currency: string }) {
                           </p>
                         </div>
                         <div className="text-end">
-                          <p className="font-black text-slate-900">{money(order.total)}</p>
-                          <p className="text-[11px] font-semibold text-emerald-600">
-                            {S.change}: {money(order.changeDue)}
+                          <p className={cn("font-black", order.voidedAt ? "text-rose-400 line-through" : "text-slate-900")}>
+                            {money(order.total)}
                           </p>
+                          {order.voidedAt ? (
+                            <p className="text-[11px] font-black uppercase tracking-wide text-rose-600">{S.voided}</p>
+                          ) : (
+                            <p className="text-[11px] font-semibold text-emerald-600">
+                              {S.change}: {money(order.changeDue)}
+                            </p>
+                          )}
+                          {addons.voids === true && !order.voidedAt && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                voidOrder(order.id);
+                              }}
+                              className="mt-1 rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-rose-500 ring-1 ring-rose-200 transition hover:bg-rose-50"
+                            >
+                              {S.voidAction}
+                            </button>
+                          )}
                         </div>
                         <ChevronDown className={cn("h-5 w-5 shrink-0 text-slate-400 transition-transform", open && "rotate-180")} />
                       </button>

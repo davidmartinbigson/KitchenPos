@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders, users } from "@/db/schema";
 import { jsonError, requireActiveUser, requireApp } from "@/lib/api";
+import { addonEnabled, ORDER_PAYMENT_METHODS } from "@/lib/addons";
 
 type IncomingLine = { menuItemId: unknown; quantity: unknown };
 
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   const { session, ownerId } = guard;
 
   const [ownerPref] = await db
-    .select({ dailyOrderReset: users.dailyOrderReset })
+    .select({ dailyOrderReset: users.dailyOrderReset, addons: users.addons })
     .from(users)
     .where(eq(users.id, ownerId));
 
@@ -88,11 +89,50 @@ export async function POST(request: Request) {
       });
 
       const subtotal = priced.reduce((sum, l) => sum + l.lineTotal, 0);
+
+      // Add-on: checkout discount (validated & re-computed server-side).
+      let discountType = "none";
+      let discountValue = 0;
+      let discountAmount = 0;
+      if (addonEnabled(ownerPref?.addons, "discounts")) {
+        const d = (body.discount ?? null) as { type?: unknown; value?: unknown } | null;
+        const type = d && d.type === "flat" ? "flat" : d && d.type === "percent" ? "percent" : null;
+        const value = Math.max(0, Math.round(Number(d?.value) || 0));
+        if (type && value > 0) {
+          discountType = type;
+          discountValue = type === "percent" ? Math.min(value, 90) : value;
+          discountAmount =
+            type === "percent" ? Math.round((subtotal * discountValue) / 100) : Math.min(value, subtotal);
+        }
+      }
+      const total = subtotal - discountAmount;
+
+      // Add-on: payment method tag.
+      const paymentMethod =
+        addonEnabled(ownerPref?.addons, "payments") &&
+        (ORDER_PAYMENT_METHODS as readonly string[]).includes(String(body.paymentMethod))
+          ? String(body.paymentMethod)
+          : "cash";
+
+      // Add-on: stock — check & decrement inside the same transaction.
+      if (addonEnabled(ownerPref?.addons, "stock")) {
+        for (const line of priced) {
+          const row = products.find((m) => m.id === line.menuItemId);
+          if (row && row.stockQty != null) {
+            if (row.stockQty < line.quantity) throw new Error("STOCK_SHORT");
+            await tx
+              .update(menuItems)
+              .set({ stockQty: row.stockQty - line.quantity })
+              .where(eq(menuItems.id, row.id));
+          }
+        }
+      }
+
       const received = body.amountReceived === undefined || body.amountReceived === null
-        ? subtotal
+        ? total
         : Math.round(Number(body.amountReceived));
 
-      if (!Number.isFinite(received) || received < subtotal) throw new Error("INSUFFICIENT");
+      if (!Number.isFinite(received) || received < total) throw new Error("INSUFFICIENT");
 
       const [{ lastNumber }] = await tx
         .select({ lastNumber: max(orders.orderNumber) })
@@ -119,9 +159,13 @@ export async function POST(request: Request) {
           dailyOrderNo: Number(todayCount ?? 0) + 1,
           customerName,
           subtotal,
-          total: subtotal,
+          total,
+          discountType,
+          discountValue,
+          discountAmount,
+          paymentMethod,
           amountReceived: received,
-          changeDue: received - subtotal,
+          changeDue: received - total,
           itemCount: priced.reduce((sum, l) => sum + l.quantity, 0),
         })
         .returning();
@@ -142,6 +186,7 @@ export async function POST(request: Request) {
     const code = error instanceof Error ? error.message : "";
     if (code === "ITEM_UNAVAILABLE") return jsonError("ITEM_UNAVAILABLE", 409);
     if (code === "INSUFFICIENT") return jsonError("INSUFFICIENT", 400);
+    if (code === "STOCK_SHORT") return jsonError("STOCK_SHORT", 409);
     throw error;
   }
 }

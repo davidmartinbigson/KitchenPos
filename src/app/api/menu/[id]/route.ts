@@ -29,6 +29,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     if (!name) return jsonError("NAME_PRICE_REQUIRED", 400);
     updates.name = name.slice(0, 120);
   }
+  if (body.stockQty !== undefined) {
+    updates.stockQty =
+      body.stockQty === null || body.stockQty === ""
+        ? null
+        : Number.isFinite(Number(body.stockQty))
+          ? Math.max(0, Math.round(Number(body.stockQty)))
+          : null;
+  }
   if (body.price !== undefined) {
     const price = Math.round(Number(body.price));
     if (!Number.isFinite(price) || price < 0) return jsonError("NAME_PRICE_REQUIRED", 400);

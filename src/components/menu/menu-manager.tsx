@@ -33,6 +33,7 @@ type FormState = {
   category: string;
   description: string;
   price: string;
+  stock: string;
   emoji: string;
   available: boolean;
   imageData: string | null;
@@ -43,6 +44,7 @@ const emptyForm: FormState = {
   category: "",
   description: "",
   price: "",
+  stock: "",
   emoji: "🍽️",
   available: true,
   imageData: null,
@@ -109,6 +111,7 @@ export function MenuManager({
       category: item.category === "General" ? "" : item.category,
       description: item.description,
       price: String(item.price),
+      stock: item.stockQty == null ? "" : String(item.stockQty),
       emoji: item.emoji,
       available: item.available,
       imageData: item.imageData,
@@ -145,6 +148,7 @@ export function MenuManager({
       category: form.category.trim() || "General",
       description: form.description.trim(),
       price,
+      stockQty: form.stock === "" ? null : Math.max(0, Math.round(Number(form.stock) || 0)),
       emoji: form.emoji,
       available: form.available,
       imageData: form.imageData,
@@ -527,6 +531,17 @@ export function MenuManager({
                     placeholder={`${currency} 0`}
                   />
                 </div>
+              </Field>
+              <Field label={M.stockQty} hint={M.stockQtyHint}>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={form.stock}
+                  onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
+                  placeholder={M.stockQtyPh}
+                />
               </Field>
             </div>
             <Field label={M.description}>

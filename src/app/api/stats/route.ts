@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, count, desc, eq, gte, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, sql, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders } from "@/db/schema";
 import { requireActiveUser } from "@/lib/api";
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       orderCount: count(orders.id).mapWith(Number),
     })
     .from(orders)
-    .where(and(eq(orders.userId, user.id), gte(orders.createdAt, fromInstant)))
+    .where(and(eq(orders.userId, user.id), gte(orders.createdAt, fromInstant), isNull(orders.voidedAt)))
     .groupBy(localDay);
 
   const dailyMap = new Map(dailyRows.map((r) => [r.day, r]));
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       orderCount: count(orders.id).mapWith(Number),
     })
     .from(orders)
-    .where(eq(orders.userId, user.id));
+    .where(and(eq(orders.userId, user.id), isNull(orders.voidedAt)));
 
   const [menuCount] = await db
     .select({ value: count(menuItems.id).mapWith(Number) })
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     })
     .from(orderItems)
     .innerJoin(orders, eq(orderItems.orderId, orders.id))
-    .where(eq(orders.userId, user.id))
+    .where(and(eq(orders.userId, user.id), isNull(orders.voidedAt)))
     .groupBy(orderItems.name)
     .orderBy(desc(sum(orderItems.quantity)))
     .limit(5);

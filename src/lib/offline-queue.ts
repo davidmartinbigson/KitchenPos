@@ -15,6 +15,8 @@ export type QueuedOrder = {
   customerName: string;
   amountReceived: number;
   items: QueuedOrderItem[];
+  discount?: { type: string; value: number };
+  paymentMethod?: string;
 };
 
 const QUEUE_KEY = "kpos_offline_orders_v1";

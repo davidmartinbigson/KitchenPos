@@ -61,6 +61,12 @@ export async function POST(request: Request) {
       imageData,
       emoji: String(body.emoji ?? "").trim().slice(0, 8) || "🍽️",
       available: body.available === false ? false : true,
+      stockQty:
+        body.stockQty === null || body.stockQty === undefined || body.stockQty === ""
+          ? null
+          : Number.isFinite(Number(body.stockQty))
+            ? Math.max(0, Math.round(Number(body.stockQty)))
+            : null,
     })
     .returning();
 

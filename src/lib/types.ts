@@ -7,4 +7,5 @@ export type MenuItemDTO = {
   imageData: string | null;
   emoji: string;
   available: boolean;
+  stockQty?: number | null;
 };

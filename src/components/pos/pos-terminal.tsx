@@ -31,6 +31,8 @@ import type { MenuItemDTO } from "@/lib/types";
 
 type ReceiptData = {
   orderNumber: number | string;
+  discount?: number;
+  paymentMethod?: string;
   createdAt: string;
   customerName: string;
   shopName: string;
@@ -65,13 +67,16 @@ export function PosTerminal({
   shopName,
   sellerName,
   readOnly = false,
+  addons = {},
 }: {
   initialItems: MenuItemDTO[];
   currency: string;
   shopName: string;
   sellerName?: string;
   readOnly?: boolean;
+  addons?: Record<string, boolean>;
 }) {
+  const addOn = (key: string) => addons[key] === true;
   const { t, lang } = useI18n();
   const toast = useToast();
   const P = t.pos;
@@ -115,6 +120,8 @@ export function PosTerminal({
             customerName: entry.customerName,
             amountReceived: entry.amountReceived,
             items: entry.items,
+            discount: entry.discount,
+            paymentMethod: entry.paymentMethod,
           }),
         });
         if (res.ok) {
@@ -204,7 +211,17 @@ export function PosTerminal({
     [items, cart],
   );
 
-  const total = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+  const [discType, setDiscType] = useState<"percent" | "flat">("percent");
+  const [discValue, setDiscValue] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+
+  const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+  const discountAmount = !addOn("discounts")
+    ? 0
+    : discType === "percent"
+      ? Math.min(subtotal, Math.max(0, Math.round((subtotal * (Number(discValue) || 0)) / 100)))
+      : Math.min(subtotal, Math.max(0, Math.round(Number(discValue) || 0)));
+  const total = subtotal - discountAmount;
   const itemCount = lines.reduce((sum, l) => sum + l.qty, 0);
   const receivedNum = received.trim() === "" ? total : Math.round(Number(received));
   const validReceived = Number.isFinite(receivedNum);
@@ -252,6 +269,8 @@ export function PosTerminal({
       customerName: customer.trim(),
       amountReceived: receivedNum,
       items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+      discount: addOn("discounts") ? { type: discType, value: Number(discValue) || 0 } : undefined,
+      paymentMethod: addOn("payments") ? payMethod : undefined,
     });
     setPending(queue.length);
     setReceipt({
@@ -291,6 +310,8 @@ export function PosTerminal({
           customerName: customer,
           amountReceived: receivedNum,
           items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+          discount: addOn("discounts") ? { type: discType, value: Number(discValue) || 0 } : undefined,
+          paymentMethod: addOn("payments") ? payMethod : undefined,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -302,6 +323,8 @@ export function PosTerminal({
           total: number;
           amountReceived: number;
           changeDue: number;
+          discountAmount?: number;
+          paymentMethod?: string;
         };
         displayOrderNo?: number;
       };
@@ -321,6 +344,8 @@ export function PosTerminal({
         total: data.order.total,
         received: data.order.amountReceived,
         change: data.order.changeDue,
+        discount: data.order.discountAmount ?? 0,
+        paymentMethod: data.order.paymentMethod ?? "cash",
       });
       resetOrder();
       toast.show(P.orderSaved, "success");
@@ -433,6 +458,7 @@ export function PosTerminal({
                 <AnimatePresence mode="popLayout">
                   {filtered.map((item, i) => {
                     const qty = cart[item.id] ?? 0;
+                    const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
                     return (
                       <motion.button
                         layout
@@ -442,8 +468,8 @@ export function PosTerminal({
                         exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ delay: Math.min(i * 0.02, 0.3), duration: 0.35 }}
                         whileTap={item.available ? { scale: 0.95 } : undefined}
-                        onClick={() => item.available && addItem(item.id)}
-                        disabled={!item.available}
+                        onClick={() => item.available && !soldOut && addItem(item.id)}
+                        disabled={!item.available || soldOut}
                         className={cn(
                           "group relative flex flex-col overflow-hidden rounded-3xl bg-white text-start shadow-[0_8px_30px_-12px_rgba(15,23,42,0.25)] ring-1 transition-all duration-300",
                           qty > 0 ? "ring-2 ring-orange-400" : "ring-slate-100",
@@ -478,6 +504,16 @@ export function PosTerminal({
                           {!item.available && (
                             <span className="absolute start-2 top-2 rounded-full bg-slate-900/80 px-2 py-0.5 text-[11px] font-bold text-white">
                               {t.menu.unavailable}
+                            </span>
+                          )}
+                          {soldOut && (
+                            <span className="absolute end-2 bottom-2 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                              {P.soldOut}
+                            </span>
+                          )}
+                          {addOn("stock") && item.stockQty != null && item.stockQty > 0 && item.stockQty <= 10 && (
+                            <span className="absolute end-2 bottom-2 rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                              {item.stockQty} {P.stockLeft}
                             </span>
                           )}
                         </div>
@@ -656,6 +692,76 @@ export function PosTerminal({
                   </div>
                 </div>
 
+                {/* Add-on: checkout discount */}
+                {addOn("discounts") && (
+                  <div className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200">
+                    <p className="text-xs font-bold text-amber-700">{P.discount}</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDiscType("percent")}
+                        className={cn(
+                          "rounded-xl px-3 py-1.5 text-xs font-bold ring-1 transition",
+                          discType === "percent"
+                            ? "bg-amber-600 text-white ring-amber-600"
+                            : "bg-white text-slate-600 ring-slate-200",
+                        )}
+                      >
+                        {P.discPercent}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDiscType("flat")}
+                        className={cn(
+                          "rounded-xl px-3 py-1.5 text-xs font-bold ring-1 transition",
+                          discType === "flat"
+                            ? "bg-amber-600 text-white ring-amber-600"
+                            : "bg-white text-slate-600 ring-slate-200",
+                        )}
+                      >
+                        {P.discFlat}
+                      </button>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={discValue}
+                        onChange={(e) => setDiscValue(e.target.value)}
+                        placeholder={discType === "percent" ? "10%" : "50"}
+                        className="h-9 flex-1"
+                      />
+                      {discountAmount > 0 && (
+                        <span className="self-center text-xs font-bold text-amber-700">
+                          −{money(discountAmount)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add-on: payment method */}
+                {addOn("payments") && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500">{P.payMethod}</span>
+                    <div className="flex flex-1 flex-wrap gap-1.5">
+                      {(["cash", "card", "jazzcash", "easypaisa", "bank"] as const).map((m) => (
+                        <button
+                          type="button"
+                          key={m}
+                          onClick={() => setPayMethod(m)}
+                          className={cn(
+                            "rounded-xl px-3 py-1.5 text-xs font-bold ring-1 transition",
+                            payMethod === m
+                              ? "bg-slate-900 text-white ring-slate-900"
+                              : "bg-white text-slate-600 ring-slate-200 hover:ring-orange-300",
+                          )}
+                        >
+                          {P.methods[m]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Change / balance */}
                 <motion.div
                   layout
@@ -781,10 +887,22 @@ export function PosTerminal({
               ))}
             </div>
             <div className="my-3 border-t border-dashed border-slate-300" />
+            {(receipt.discount ?? 0) > 0 && (
+              <div className="flex justify-between text-xs font-semibold text-amber-700">
+                <span>{P.discount}</span>
+                <span>−{money(receipt.discount ?? 0)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm font-black">
               <span>{P.totalLabel}</span>
               <span>{money(receipt.total)}</span>
             </div>
+            {receipt.paymentMethod && receipt.paymentMethod !== "cash" && (
+              <div className="mt-1 flex justify-between text-xs">
+                <span>{P.payMethod}</span>
+                <span className="font-bold uppercase">{receipt.paymentMethod}</span>
+              </div>
+            )}
             <div className="mt-1 flex justify-between text-xs">
               <span>{P.received}</span>
               <span>{money(receipt.received)}</span>

@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  jsonb,
   serial,
   text,
   timestamp,
@@ -29,6 +30,8 @@ export const users = pgTable("users", {
   itemLimit: integer("item_limit").notNull().default(500),
   /** Owner option: receipts number orders from 1 each day (daily receipt counter). */
   dailyOrderReset: boolean("daily_order_reset").notNull().default(false),
+  /** Opt-in extra features (Settings → Add-ons). Everything off by default. */
+  addons: jsonb("addons").notNull().default({}),
   /** Updated by the app heartbeat; master admin sees the restaurant as Online/Offline. */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -110,6 +113,8 @@ export const menuItems = pgTable(
     imageData: text("image_data"),
     emoji: text("emoji").notNull().default("🍽️"),
     available: boolean("available").notNull().default(true),
+  /** Remaining pieces for the optional stock add-on; null = unlimited. */
+  stockQty: integer("stock_qty"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("menu_items_user_idx").on(table.userId)],
@@ -134,6 +139,15 @@ export const orders = pgTable(
     itemCount: integer("item_count").notNull().default(0),
   /** Same-day order sequence (PKT day) shown on receipts when the daily counter is enabled. */
   dailyOrderNo: integer("daily_order_no").notNull().default(0),
+  /** Checkout discount add-on: percent|flat|none + the applied amount. */
+  discountType: text("discount_type").notNull().default("none"),
+  discountValue: integer("discount_value").notNull().default(0),
+  discountAmount: integer("discount_amount").notNull().default(0),
+  /** Payment methods add-on: cash|card|jazzcash|easypaisa|bank. */
+  paymentMethod: text("payment_method").notNull().default("cash"),
+  /** Void add-on: soft cancel keeping an audit trail (excluded from totals). */
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidReason: text("void_reason").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("orders_user_created_idx").on(table.userId, table.createdAt)],

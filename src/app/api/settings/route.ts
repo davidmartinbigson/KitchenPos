@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { jsonError, requireUser } from "@/lib/api";
 import { isLang } from "@/lib/i18n";
 import { currencyForCountry, isCountryCode } from "@/lib/countries";
+import { mergeAddons } from "@/lib/addons";
 
 export async function GET() {
   const { user, response } = await requireUser();
@@ -44,6 +45,10 @@ export async function PATCH(request: Request) {
   if (body.dailyOrderReset !== undefined) {
     updates.dailyOrderReset = Boolean(body.dailyOrderReset);
   }
+  if (body.addons !== undefined) {
+    const [row] = await db.select({ addons: users.addons }).from(users).where(eq(users.id, user.id));
+    updates.addons = mergeAddons(row?.addons, body.addons);
+  }
   if (body.language !== undefined) {
     if (!isLang(body.language)) return jsonError("INVALID_LANGUAGE", 400);
     updates.language = body.language;
@@ -62,6 +67,7 @@ export async function PATCH(request: Request) {
       country: users.country,
       language: users.language,
       dailyOrderReset: users.dailyOrderReset,
+      addons: users.addons,
     });
 
   return NextResponse.json({ user: updated });

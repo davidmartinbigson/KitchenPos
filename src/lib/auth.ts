@@ -98,6 +98,7 @@ export async function getCurrentUser() {
       accessExpiresAt: users.accessExpiresAt,
       itemLimit: users.itemLimit,
       dailyOrderReset: users.dailyOrderReset,
+      addons: users.addons,
       lastSeenAt: users.lastSeenAt,
     })
     .from(users)
@@ -170,6 +171,7 @@ export async function getSession(): Promise<AppSession | null> {
     const [owner] = await db
       .select({
         shopName: users.shopName,
+        addons: users.addons,
         currency: users.currency,
         suspended: users.suspended,
         accessExpiresAt: users.accessExpiresAt,
