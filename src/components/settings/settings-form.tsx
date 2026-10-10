@@ -175,8 +175,10 @@ export function SettingsForm({
             </h2>
             <p className="mt-1 text-sm text-slate-500">{t.settings.addonsDesc}</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {ADDON_KEYS.map((key) => {
-                const ready = READY_ADDONS.includes(key as (typeof READY_ADDONS)[number]);
+              {ADDON_KEYS.filter((key) =>
+                READY_ADDONS.includes(key as (typeof READY_ADDONS)[number]),
+              ).map((key) => {
+                const ready = true;
                 const meta = (t.settings.addonList as Record<string, { name: string; desc: string }>)[key];
                 const on = addons[key] === true;
                 return (
