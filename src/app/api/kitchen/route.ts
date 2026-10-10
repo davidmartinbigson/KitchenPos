@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders } from "@/db/schema";
 import { jsonError, requireApp } from "@/lib/api";
@@ -111,9 +111,38 @@ export async function PATCH(request: Request) {
     }
   }
 
+  const movedIds = scoped.map((r) => r.id);
   await db
     .update(orderItems)
     .set({ status: targetStatus })
-    .where(inArray(orderItems.id, scoped.map((r) => r.id)));
+    .where(inArray(orderItems.id, movedIds));
+
+  // Kitchen pulse + guest tracking: stamp the order completed when every item is ready/served.
+  // (per-item timestamps don't exist on order_items, so completion = all-ready moment.)
+  if (targetStatus === "ready") {
+    const touchedOrders = await db
+      .select({ orderId: orderItems.orderId })
+      .from(orderItems)
+      .where(inArray(orderItems.id, movedIds));
+    for (const row of touchedOrders) {
+      if (row.orderId == null) continue;
+      const remaining = await db
+        .select({ id: orderItems.id })
+        .from(orderItems)
+        .where(
+          and(
+            eq(orderItems.orderId, row.orderId),
+            ne(orderItems.status, "ready"),
+            ne(orderItems.status, "served"),
+          ),
+        );
+      if (remaining.length === 0) {
+        await db
+          .update(orders)
+          .set({ completedAt: new Date() })
+          .where(and(eq(orders.id, row.orderId), isNull(orders.completedAt)));
+      }
+    }
+  }
   return NextResponse.json({ ok: true, status: targetStatus });
 }
