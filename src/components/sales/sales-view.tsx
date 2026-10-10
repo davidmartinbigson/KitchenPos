@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, ChevronDown, Receipt, TrendingUp, Trophy, Wallet } from "lucide-react";
+import { CalendarDays, ChevronDown, Download, Receipt, TrendingUp, Trophy, Wallet } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { AnimatedNumber } from "@/components/animated-number";
-import { Badge, Card, EmptyState, Skeleton, cn } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Select, Skeleton, cn } from "@/components/ui";
 import { formatDate, formatMoney, formatNumber, formatTime, toLocalDateKey } from "@/lib/format";
 
 type DailyRow = { day: string; revenue: number; orders: number };
@@ -41,6 +41,7 @@ export function SalesView({ currency }: { currency: string }) {
   const [selectedDay, setSelectedDay] = useState<string>(toLocalDateKey());
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [exportRange, setExportRange] = useState<"month" | "day" | "all">("month");
   const todayKey = toLocalDateKey();
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export function SalesView({ currency }: { currency: string }) {
           <h1 className="text-3xl font-black tracking-tight text-slate-950">{S.title}</h1>
           <p className="mt-1 text-slate-600">{S.subtitle}</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-3 rounded-2xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-slate-200">
           <CalendarDays className="h-5 w-5 text-orange-500" />
           <span className="text-sm font-semibold text-slate-600">{S.date}</span>
@@ -97,6 +99,15 @@ export function SalesView({ currency }: { currency: string }) {
             className="bg-transparent font-bold text-slate-900 outline-none"
           />
         </label>
+        <Select value={exportRange} onChange={(e) => setExportRange(e.target.value as "month" | "day" | "all")} aria-label={S.exportCsv}>
+          <option value="month">{S.rangeMonth}</option>
+          <option value="day">{S.rangeDay}</option>
+          <option value="all">{S.rangeAll}</option>
+        </Select>
+        <Button variant="secondary" onClick={() => (window.location.href = "/api/sales/export?range=" + exportRange + "&day=" + selectedDay + "&tz=" + new Date().getTimezoneOffset())}>
+          <Download className="h-4 w-4" /> {S.exportCsv}
+        </Button>
+        </div>
       </header>
 
       {/* Period summary */}

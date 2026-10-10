@@ -15,6 +15,7 @@ import {
   Layers,
   CircleDollarSign,
   CheckCircle2,
+  Download,
   FileSpreadsheet,
 } from "lucide-react";
 import { CsvImport } from "@/components/menu/csv-import";
@@ -235,6 +236,9 @@ export function MenuManager({
           </span>
           <Button size="lg" variant="secondary" onClick={() => setImportOpen(true)}>
             <FileSpreadsheet className="h-5 w-5 text-emerald-600" /> {t.importer.button}
+          </Button>
+          <Button size="lg" variant="secondary" onClick={() => (window.location.href = "/api/menu/export")}>
+            <Download className="h-5 w-5 text-sky-600" /> {M.exportCsv}
           </Button>
           <Button size="lg" onClick={openCreate} className="group">
             <Plus className="h-5 w-5 transition group-hover:rotate-90" /> {M.addItem}

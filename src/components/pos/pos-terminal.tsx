@@ -36,7 +36,7 @@ type ReceiptData = {
   shopName: string;
   sellerName: string;
   currency: string;
-  lines: { name: string; qty: number; unitPrice: number; lineTotal: number }[];
+  lines: { name: string; qty: number; unitPrice: number; lineTotal: number; category: string }[];
   total: number;
   received: number;
   change: number;
@@ -45,6 +45,19 @@ type ReceiptData = {
 };
 
 const QUICK_NOTES = [100, 500, 1000, 2000, 5000];
+
+/** Group receipt lines by category — one counter slip per category. */
+function slipGroups(r: ReceiptData) {
+  const map = new Map<string, { category: string; lines: ReceiptData["lines"]; qty: number }>();
+  for (const line of r.lines) {
+    const cat = line.category.trim() || "General";
+    const group = map.get(cat) ?? { category: cat, lines: [], qty: 0 };
+    group.lines.push(line);
+    group.qty += line.qty;
+    map.set(cat, group);
+  }
+  return [...map.values()];
+}
 
 export function PosTerminal({
   initialItems,
@@ -248,7 +261,7 @@ export function PosTerminal({
       shopName,
       sellerName: sellerName ?? "",
       currency,
-      lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal })),
+      lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal, category: l.item.category || "General" })),
       total,
       received: receivedNum,
       change: Math.max(0, receivedNum - total),
@@ -296,7 +309,7 @@ export function PosTerminal({
         shopName,
         sellerName: sellerName ?? "",
         currency,
-        lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal })),
+        lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal, category: l.item.category || "General" })),
         total: data.order.total,
         received: data.order.amountReceived,
         change: data.order.changeDue,
@@ -706,13 +719,16 @@ export function PosTerminal({
         onClose={() => setReceipt(null)}
         title={P.receiptTitle}
         footer={
-          <div className="flex gap-3">
+          <div className="space-y-2">
+            <p className="text-center text-xs text-slate-500">{P.printHint}</p>
+            <div className="flex gap-3">
             <Button variant="secondary" className="flex-1" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> {P.print}
             </Button>
             <Button className="flex-1" onClick={() => setReceipt(null)}>
               <ReceiptIcon className="h-4 w-4" /> {P.newOrder}
             </Button>
+            </div>
           </div>
         }
       >
@@ -774,6 +790,75 @@ export function PosTerminal({
           </motion.div>
         )}
       </Modal>
+
+      {/* Print sheet — one counter slip per category, then the full customer receipt */}
+      {receipt && (
+        <div id="print-sheet" aria-hidden="true">
+          {slipGroups(receipt).map((group, index, groups) => (
+            <div key={group.category} className="print-slip">
+              <p className="ps-shop">{receipt.shopName}</p>
+              <p className="ps-label">{P.counterSlip}</p>
+              <p className="ps-category">{group.category}</p>
+              <p className="ps-meta">
+                {P.orderNo}
+                {receipt.orderNumber} · {formatDate(receipt.createdAt, lang)} ·{" "}
+                {formatTime(receipt.createdAt, lang)}
+              </p>
+              {receipt.customerName && <p className="ps-meta">{receipt.customerName}</p>}
+              <div className="ps-div" />
+              {group.lines.map((line) => (
+                <p key={`${group.category}-${line.name}`} className="ps-line">
+                  {formatNumber(line.qty, lang)} × {line.name}
+                </p>
+              ))}
+              <div className="ps-div" />
+              <p className="ps-meta">
+                {P.qty}: {formatNumber(group.qty, lang)} · {formatNumber(index + 1, lang)}/
+                {formatNumber(groups.length + 1, lang)}
+              </p>
+            </div>
+          ))}
+          <div className="print-slip">
+            <p className="ps-shop">{receipt.shopName}</p>
+            <p className="ps-label">{P.customerCopy}</p>
+            <p className="ps-meta">
+              {P.orderNo}
+              {receipt.orderNumber} · {formatDate(receipt.createdAt, lang)} ·{" "}
+              {formatTime(receipt.createdAt, lang)}
+            </p>
+            {receipt.customerName && <p className="ps-meta">{receipt.customerName}</p>}
+            {receipt.sellerName && (
+              <p className="ps-meta">
+                {P.by} {receipt.sellerName}
+              </p>
+            )}
+            <div className="ps-div" />
+            {receipt.lines.map((line) => (
+              <div key={`customer-${line.category}-${line.name}`} className="ps-line ps-split">
+                <span>
+                  {formatNumber(line.qty, lang)} × {line.name}
+                </span>
+                <span>{formatNumber(line.lineTotal, lang)}</span>
+              </div>
+            ))}
+            <div className="ps-div" />
+            <div className="ps-line ps-split ps-total">
+              <span>{P.totalLabel}</span>
+              <span>{money(receipt.total)}</span>
+            </div>
+            <div className="ps-line ps-split">
+              <span>{P.received}</span>
+              <span>{money(receipt.received)}</span>
+            </div>
+            <div className="ps-line ps-split ps-change">
+              <span>{P.changeLabel}</span>
+              <span>{money(receipt.change)}</span>
+            </div>
+            <div className="ps-div" />
+            <p className="ps-meta">{P.thankYou}</p>
+          </div>
+        </div>
+      )}
 
       {/* Mobile floating total bar */}
       {hasMenu && lines.length > 0 && (
