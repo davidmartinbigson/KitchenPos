@@ -24,3 +24,6 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 .vercel
 .env*
+
+# legacy staging build output
+/deploy/

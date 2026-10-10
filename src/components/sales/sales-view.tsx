@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, ChevronDown, Download, Receipt, TrendingUp, Trophy, Wallet } from "lucide-react";
+import { CalendarDays, ChevronDown, Download, MessageCircle, Plus, Receipt, Sparkles, Trash2, TrendingUp, Trophy, Wallet } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { AnimatedNumber } from "@/components/animated-number";
-import { Badge, Button, Card, EmptyState, Select, Skeleton, cn } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from "@/components/ui";
 import { formatDate, formatMoney, formatNumber, formatTime, toLocalDateKey } from "@/lib/format";
 
 type DailyRow = { day: string; revenue: number; orders: number };
+type ExpenseRow = { id: number; title: string; amount: number; createdAt: string };
 type OrderRow = {
   id: number;
   orderNumber: number;
@@ -42,6 +43,9 @@ export function SalesView({ currency }: { currency: string }) {
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [exportRange, setExportRange] = useState<"month" | "day" | "all">("month");
+  const [expenses, setExpenses] = useState<ExpenseRow[] | null>(null);
+  const [expForm, setExpForm] = useState({ title: "", amount: "" });
+  const [expSaving, setExpSaving] = useState(false);
   const todayKey = toLocalDateKey();
 
   useEffect(() => {
@@ -62,6 +66,15 @@ export function SalesView({ currency }: { currency: string }) {
       .catch(() => setOrders([]));
   }, [selectedDay]);
 
+  useEffect(() => {
+    setExpenses(null);
+    const { from, to } = dayRange(selectedDay);
+    fetch(`/api/expenses?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
+      .then((r) => r.json())
+      .then((data: { expenses: ExpenseRow[] }) => setExpenses(data.expenses ?? []))
+      .catch(() => setExpenses([]));
+  }, [selectedDay]);
+
   const periodTotals = useMemo(() => {
     if (!daily) return null;
     const revenue = daily.reduce((s, d) => s + d.revenue, 0);
@@ -73,6 +86,48 @@ export function SalesView({ currency }: { currency: string }) {
   const maxDay = Math.max(1, ...(daily?.map((d) => d.revenue) ?? [1]));
   const dayRevenue = orders?.reduce((s, o) => s + o.total, 0) ?? 0;
   const dayOrderCount = orders?.length ?? 0;
+
+  const expTotal = (expenses ?? []).reduce((s, e) => s + e.amount, 0);
+  const bachat = dayRevenue - expTotal;
+
+  const addExpense = async (event: FormEvent) => {
+    event.preventDefault();
+    const amount = Math.round(Number(expForm.amount));
+    if (!expForm.title.trim() || !Number.isFinite(amount) || amount < 1) return;
+    setExpSaving(true);
+    try {
+      const res = await fetch("/api/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: expForm.title.trim(), amount }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { expense: ExpenseRow };
+        setExpenses((prev) => [...(prev ?? []), data.expense]);
+        setExpForm({ title: "", amount: "" });
+      }
+    } finally {
+      setExpSaving(false);
+    }
+  };
+
+  const removeExpense = async (id: number) => {
+    setExpenses((prev) => (prev ?? []).filter((e) => e.id !== id));
+    await fetch(`/api/expenses/${id}`, { method: "DELETE" }).catch(() => {});
+  };
+
+  const shareDaySummary = () => {
+    const lines = [
+      `🍽️ ${S.dayClose}`,
+      dayLabel(selectedDay),
+      `${S.saleLabel}: ${money(dayRevenue)}`,
+      `${S.expenseLabel}: ${money(expTotal)}${expenses && expenses.length ? ` (${formatNumber(expenses.length, lang)})` : ""}`,
+      `✨ ${S.bachatLabel}: ${money(bachat)}`,
+      `${S.dayOrders}: ${formatNumber(dayOrderCount, lang)}`,
+      "— Kitchen POS",
+    ];
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+  };
 
   const dayLabel = (key: string) =>
     formatDate(new Date(`${key}T00:00:00`), lang);
@@ -109,6 +164,109 @@ export function SalesView({ currency }: { currency: string }) {
         </Button>
         </div>
       </header>
+
+      {/* Day close: Sale − Kharcha = Bachat */}
+      <Card className="p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Sparkles className="h-5 w-5 text-amber-500" /> {S.dayClose}
+            </h2>
+            <p className="text-sm text-slate-500">{dayLabel(selectedDay)}</p>
+          </div>
+          <Button variant="secondary" onClick={shareDaySummary}>
+            <MessageCircle className="h-4 w-4 text-emerald-600" /> {S.waShare}
+          </Button>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{S.saleLabel}</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">
+              <AnimatedNumber value={dayRevenue} format={(n) => money(n)} />
+            </p>
+          </div>
+          <div className="rounded-2xl bg-red-50 p-4 ring-1 ring-red-200">
+            <p className="text-xs font-bold uppercase tracking-wide text-red-500">{S.expenseLabel}</p>
+            <p className="mt-1 text-2xl font-black text-red-700">
+              {expenses === null ? <Skeleton className="h-8 w-24" /> : money(expTotal)}
+            </p>
+          </div>
+          <div
+            className={cn(
+              "rounded-2xl p-4 ring-1",
+              bachat >= 0 ? "bg-emerald-50 ring-emerald-200" : "bg-red-50 ring-red-200",
+            )}
+          >
+            <p
+              className={cn(
+                "text-xs font-bold uppercase tracking-wide",
+                bachat >= 0 ? "text-emerald-600" : "text-red-500",
+              )}
+            >
+              {S.bachatLabel} <span className="font-medium normal-case">({S.bachatHint})</span>
+            </p>
+            <p className={cn("mt-1 text-2xl font-black", bachat >= 0 ? "text-emerald-700" : "text-red-700")}>
+              <AnimatedNumber value={bachat} format={(n) => money(n)} />
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-700">{S.expTitle}</h3>
+            <form onSubmit={addExpense} className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={expForm.title}
+                onChange={(e) => setExpForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder={S.expNamePh}
+                maxLength={120}
+                className="flex-1"
+              />
+              <Input
+                value={expForm.amount}
+                onChange={(e) => setExpForm((f) => ({ ...f, amount: e.target.value }))}
+                placeholder={S.expAmountPh}
+                type="number"
+                min="1"
+                className="sm:w-28"
+              />
+              <Button type="submit" disabled={expSaving}>
+                <Plus className="h-4 w-4" /> {S.expAdd}
+              </Button>
+            </form>
+          </div>
+          <div>
+            {!expenses ? (
+              <Skeleton className="h-24 w-full" />
+            ) : expenses.length === 0 ? (
+              <p className="rounded-2xl bg-slate-50 py-5 text-center text-sm text-slate-500 ring-1 ring-slate-100">
+                {S.expNone}
+              </p>
+            ) : (
+              <ul className="scroll-thin max-h-48 space-y-2 overflow-y-auto pe-1">
+                {expenses.map((e) => (
+                  <li
+                    key={e.id}
+                    className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">{e.title}</span>
+                    <span className="shrink-0 text-xs text-slate-400">{formatTime(e.createdAt, lang)}</span>
+                    <span className="shrink-0 text-sm font-bold text-red-600">{money(e.amount)}</span>
+                    <button
+                      onClick={() => removeExpense(e.id)}
+                      className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                      aria-label="Delete expense"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* Period summary */}
       <section className="grid gap-4 sm:grid-cols-3">

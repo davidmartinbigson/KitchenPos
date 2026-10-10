@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   X,
   BadgeDollarSign,
+  Radio,
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -55,6 +56,7 @@ export type ShellUser =
 
 const ownerNav = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { href: "/live", key: "live", icon: Radio },
   { href: "/pos", key: "pos", icon: ShoppingBasket },
   { href: "/kitchen", key: "kitchen", icon: CookingPot },
   { href: "/menu", key: "menu", icon: UtensilsCrossed },

@@ -188,3 +188,18 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
 }));
+
+/** Daily shop expenses (Kharcha) — the "Aaj ki Bachat" day-close feature. */
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default(""),
+    amount: integer("amount").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("expenses_user_created_idx").on(table.userId, table.createdAt)],
+);

@@ -20,7 +20,7 @@ export function supportEmail() {
   );
 }
 
-function createTransporter() {
+export function createTransporter() {
   const port = Number(process.env.SMTP_PORT ?? 587) || 587;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -32,7 +32,7 @@ function createTransporter() {
   });
 }
 
-function fromAddress() {
+export function fromAddress() {
   return process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@kitchen-pos.app";
 }
 
