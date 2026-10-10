@@ -1,99 +1,98 @@
 import { NextResponse } from "next/server";
-import { and, eq, gte, lt, ne } from "drizzle-orm";
+import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { expenses, orders, users } from "@/db/schema";
-import { sendDailySummaryEmail } from "@/lib/summary-mail";
+import { orders, expenses, users } from "@/db/schema";
+import { requireApp } from "@/lib/api";
+import { sendDailySummaryEmail } from "@/lib/mail";
+import { accessState } from "@/lib/access";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * Daily summary cron — runs at 19:00 UTC (= 00:00 midnight PKT, Asia/Karachi).
- * Sends every ACTIVE owner their end-of-day report: sale, orders, expenses, bachat.
- * Guarded by a Bearer secret so random visitors can't trigger mass email sends.
- */
-export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-    }
-  }
+// Evening window in UTC = 19:00–22:59 Pakistan time (PKT = UTC+5).
+function inEveningWindow(): boolean {
+  const h = new Date().getUTCHours();
+  return h >= 14 && h <= 17;
+}
 
+async function summaryFor(userId: number) {
   const now = new Date();
-  // Asia/Karachi is fixed UTC+5 (no DST). Compute today's boundaries in PKT.
-  const PKT_OFFSET_MIN = 300;
-  const nowPkt = new Date(now.getTime() + PKT_OFFSET_MIN * 60_000);
-  const dayStartUtcMs = Date.UTC(nowPkt.getUTCFullYear(), nowPkt.getUTCMonth(), nowPkt.getUTCDate()) - PKT_OFFSET_MIN * 60_000;
-  const from = new Date(dayStartUtcMs);
-  const to = new Date(dayStartUtcMs + 24 * 60 * 60 * 1000);
-  const dateLabel = nowPkt.toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
+  const from = new Date(now);
+  from.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(from);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [dayOrders, dayExpenses, pendingCount] = await Promise.all([
+    db.query.orders.findMany({
+      where: and(gte(orders.createdAt, from), lt(orders.createdAt, tomorrow), eq(orders.userId, userId)),
+      columns: { total: true },
+    }),
+    db.query.expenses.findMany({
+      where: and(gte(expenses.createdAt, from), lt(expenses.createdAt, tomorrow), eq(expenses.userId, userId)),
+      columns: { amount: true },
+    }),
+    db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(eq(orders.userId, userId), isNull(orders.completedAt))),
+  ]);
+
+  return {
+    revenue: dayOrders.reduce((s, o) => s + o.total, 0),
+    orderCount: dayOrders.length,
+    expenseTotal: dayExpenses.reduce((s, e) => s + e.amount, 0),
+    pendingOrders: pendingCount.length,
+  };
+}
+
+async function sendForUser(u: { id: number; email: string; shopName: string; currency: string }): Promise<boolean> {
+  const sum = await summaryFor(u.id);
+  if (sum.orderCount === 0 && sum.expenseTotal === 0) return false;
+  return await sendDailySummaryEmail({
+    to: u.email,
+    shopName: u.shopName,
+    currency: u.currency,
+    ...sum,
   });
+}
 
-  const owners = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      shopName: users.shopName,
-      currency: users.currency,
-      suspended: users.suspended,
-      accessExpiresAt: users.accessExpiresAt,
-    })
-    .from(users)
-    .where(ne(users.role, "admin"));
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const secret = process.env.CRON_SECRET;
 
-  let sent = 0;
-  const skipped: string[] = [];
-
-  for (const owner of owners) {
-    const active = !owner.suspended && owner.accessExpiresAt !== null && owner.accessExpiresAt > now;
-    if (!active) continue;
-
-    const dayOrders = await db.query.orders.findMany({
-      where: and(eq(orders.userId, owner.id), gte(orders.createdAt, from), lt(orders.createdAt, to)),
-      with: { items: true },
-    });
-    const dayExpenses = await db
-      .select()
-      .from(expenses)
-      .where(and(eq(expenses.userId, owner.id), gte(expenses.createdAt, from), lt(expenses.createdAt, to)));
-
-    const activeOrders = dayOrders.filter((o) => !o.voidedAt);
-    if (activeOrders.length === 0 && dayExpenses.length === 0) {
-      skipped.push(owner.email);
-      continue; // nothing happened today — don't send a pointless email
+  // Path A: external cron / manual trigger with the secret key.
+  if (secret && url.searchParams.get("key") === secret) {
+    const owners = await db.select().from(users);
+    let sent = 0;
+    let skipped = 0;
+    for (const u of owners) {
+      if (u.role !== "owner" || accessState(u) !== "active") continue;
+      try {
+        if (await sendForUser(u)) sent++;
+        else skipped++;
+      } catch {
+        skipped++;
+      }
     }
+    return NextResponse.json({ ok: true, mode: "broadcast", sent, skipped });
+  }
 
-    const sale = activeOrders.reduce((s, o) => s + o.total, 0);
-    const expensesTotal = dayExpenses.reduce((s, e) => s + e.amount, 0);
-    const tally = new Map<string, number>();
-    for (const o of activeOrders) {
-      for (const it of o.items) tally.set(it.name, (tally.get(it.name) ?? 0) + it.quantity);
-    }
-    let topItem: { name: string; qty: number } | null = null;
-    for (const [name, qty] of tally) if (!topItem || qty > topItem.qty) topItem = { name, qty };
-
+  // Path B: lazy auto-trigger from the signed-in owner's app (deduped client-side).
+  if (url.searchParams.get("auto") === "1") {
+    const guard = await requireApp(["owner"]);
+    if (!guard.ok) return guard.response;
+    if (!inEveningWindow()) return NextResponse.json({ ok: true, sent: false, reason: "outside_window" });
     try {
-      const ok = await sendDailySummaryEmail(owner.email, owner.shopName, {
-        dateLabel,
-        sale,
-        ordersCount: activeOrders.length,
-        expensesTotal,
-        bachat: sale - expensesTotal,
-        topItem,
-        currency: owner.currency,
+      const sent = await sendForUser({
+        id: guard.ownerId,
+        email: guard.session.type === "owner" ? guard.session.user.email : "",
+        shopName: guard.session.type === "owner" ? guard.session.user.shopName : "",
+        currency: guard.session.type === "owner" ? guard.session.user.currency : "PKR",
       });
-      if (ok) sent += 1;
+      return NextResponse.json({ ok: true, sent });
     } catch {
-      /* one bad email shouldn't stop the rest */
+      return NextResponse.json({ ok: false }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ ok: true, sent, skipped, date: from.toISOString() });
+  return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 }

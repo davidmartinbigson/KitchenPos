@@ -21,6 +21,7 @@ import {
   Wifi,
   X,
   AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
@@ -33,6 +34,7 @@ type ReceiptData = {
   orderNumber: number | string;
   discount?: number;
   paymentMethod?: string;
+  customerPhone?: string;
   createdAt: string;
   customerName: string;
   shopName: string;
@@ -84,7 +86,7 @@ export function PosTerminal({
   const [items] = useState<MenuItemDTO[]>(initialItems);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [cart, setCart] = useState<Record<number, number>>({});
+  const [cart, setCart] = useState<Record<string, number>>({});
   const [customer, setCustomer] = useState("");
   const [received, setReceived] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -122,6 +124,7 @@ export function PosTerminal({
             items: entry.items,
             discount: entry.discount,
             paymentMethod: entry.paymentMethod,
+            customerPhone: entry.customerPhone,
           }),
         });
         if (res.ok) {
@@ -205,15 +208,34 @@ export function PosTerminal({
 
   const lines = useMemo(
     () =>
-      items
-        .filter((i) => cart[i.id] > 0)
-        .map((i) => ({ item: i, qty: cart[i.id], lineTotal: i.price * cart[i.id] })),
+      Object.entries(cart)
+        .filter(([, qty]) => (qty ?? 0) > 0)
+        .map(([key, qty]) => {
+          const [rawId, rawEx] = key.split("x");
+          const item = items.find((i) => i.id === Number(rawId));
+          if (!item) return null;
+          const extras = item.extras ?? [];
+          const ex = rawEx === undefined ? null : (extras[Number(rawEx)] ?? null);
+          const unitPrice = item.price + (ex?.price ?? 0);
+          const displayName = ex ? `${item.name} + ${ex.name}` : item.name;
+          return {
+            item,
+            key,
+            qty,
+            unitPrice,
+            lineTotal: unitPrice * qty,
+            extraIndex: ex ? Number(rawEx) : undefined,
+            displayName,
+          };
+        })
+        .filter((l): l is Exclude<typeof l, null> => l !== null),
     [items, cart],
   );
 
   const [discType, setDiscType] = useState<"percent" | "flat">("percent");
   const [discValue, setDiscValue] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
   const discountAmount = !addOn("discounts")
@@ -230,11 +252,11 @@ export function PosTerminal({
   const enoughCash = validReceived && receivedNum >= total;
   const canSubmit = lines.length > 0 && enoughCash && !submitting;
 
-  function addItem(id: number) {
-    setCart((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+  function addItem(key: string) {
+    setCart((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
   }
 
-  function changeQty(id: number, delta: number) {
+  function changeQty(id: string, delta: number) {
     setCart((prev) => {
       const next = (prev[id] ?? 0) + delta;
       const copy = { ...prev };
@@ -244,7 +266,7 @@ export function PosTerminal({
     });
   }
 
-  function removeLine(id: number) {
+  function removeLine(id: string) {
     setCart((prev) => {
       const copy = { ...prev };
       delete copy[id];
@@ -255,6 +277,7 @@ export function PosTerminal({
   function resetOrder() {
     setCart({});
     setCustomer("");
+    setCustomerPhone("");
     setReceived("");
   }
 
@@ -268,7 +291,7 @@ export function PosTerminal({
     const queue = enqueueOrder({
       customerName: customer.trim(),
       amountReceived: receivedNum,
-      items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+      items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex })),
       discount: addOn("discounts") ? { type: discType, value: Number(discValue) || 0 } : undefined,
       paymentMethod: addOn("payments") ? payMethod : undefined,
     });
@@ -280,7 +303,7 @@ export function PosTerminal({
       shopName,
       sellerName: sellerName ?? "",
       currency,
-      lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal, category: l.item.category || "General" })),
+      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General" })),
       total,
       received: receivedNum,
       change: Math.max(0, receivedNum - total),
@@ -309,9 +332,10 @@ export function PosTerminal({
         body: JSON.stringify({
           customerName: customer,
           amountReceived: receivedNum,
-          items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+          items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex })),
           discount: addOn("discounts") ? { type: discType, value: Number(discValue) || 0 } : undefined,
           paymentMethod: addOn("payments") ? payMethod : undefined,
+          customerPhone: addOn("whatsappCustomer") ? customerPhone.trim() : undefined,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -340,11 +364,12 @@ export function PosTerminal({
         shopName,
         sellerName: sellerName ?? "",
         currency,
-        lines: lines.map((l) => ({ name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.lineTotal, category: l.item.category || "General" })),
+        lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General" })),
         total: data.order.total,
         received: data.order.amountReceived,
         change: data.order.changeDue,
         discount: data.order.discountAmount ?? 0,
+        customerPhone: addOn("whatsappCustomer") ? customerPhone.trim() : (data.order as { customerPhone?: string }).customerPhone,
         paymentMethod: data.order.paymentMethod ?? "cash",
       });
       resetOrder();
@@ -468,7 +493,7 @@ export function PosTerminal({
                         exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ delay: Math.min(i * 0.02, 0.3), duration: 0.35 }}
                         whileTap={item.available ? { scale: 0.95 } : undefined}
-                        onClick={() => item.available && !soldOut && addItem(item.id)}
+                        onClick={() => item.available && !soldOut && addItem(String(item.id))}
                         disabled={!item.available || soldOut}
                         className={cn(
                           "group relative flex flex-col overflow-hidden rounded-3xl bg-white text-start shadow-[0_8px_30px_-12px_rgba(15,23,42,0.25)] ring-1 transition-all duration-300",
@@ -521,6 +546,26 @@ export function PosTerminal({
                           <p className="line-clamp-1 font-bold text-slate-900">{item.name}</p>
                           <p className="line-clamp-1 text-xs text-slate-500">{item.category}</p>
                           <p className="mt-auto pt-1 text-base font-black text-orange-600">{money(item.price)}</p>
+                          {addOn("modifiers") && (item.extras?.length ?? 0) > 0 && (
+                            <div
+                              className="mt-1 flex flex-wrap gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {(item.extras ?? []).map((ex, ei) => (
+                                <button
+                                  type="button"
+                                  key={ex.name}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (item.available && !soldOut) addItem(`${item.id}x${ei}`);
+                                  }}
+                                  className="rounded-lg bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-200"
+                                >
+                                  +{ex.name} {ex.price ? `+${formatNumber(ex.price, lang)}` : ""}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </motion.button>
                     );
@@ -598,7 +643,7 @@ export function PosTerminal({
                           <div className="flex items-center gap-1 rounded-xl bg-white p-1 shadow-sm">
                             <button
                               aria-label="-"
-                              onClick={() => changeQty(line.item.id, -1)}
+                              onClick={() => changeQty(line.key, -1)}
                               className="grid h-7 w-7 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-100"
                             >
                               <Minus className="h-3.5 w-3.5" />
@@ -606,7 +651,7 @@ export function PosTerminal({
                             <span className="w-7 text-center text-sm font-black">{line.qty}</span>
                             <button
                               aria-label="+"
-                              onClick={() => changeQty(line.item.id, 1)}
+                              onClick={() => changeQty(line.key, 1)}
                               className="grid h-7 w-7 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-100"
                             >
                               <Plus className="h-3.5 w-3.5" />
@@ -615,7 +660,7 @@ export function PosTerminal({
                           <div className="w-16 text-end">
                             <p className="text-sm font-black text-slate-900">{formatNumber(line.lineTotal, lang)}</p>
                             <button
-                              onClick={() => removeLine(line.item.id)}
+                              onClick={() => removeLine(line.key)}
                               className="text-[11px] font-semibold text-rose-500 hover:underline"
                             >
                               {P.remove}
@@ -762,6 +807,20 @@ export function PosTerminal({
                   </div>
                 )}
 
+                {/* Add-on: customer WhatsApp */}
+                {addOn("whatsappCustomer") && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-500">{P.customerPhone}</p>
+                    <Input
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+                      placeholder="923001234567"
+                      inputMode="tel"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+
                 {/* Change / balance */}
                 <motion.div
                   layout
@@ -839,6 +898,22 @@ export function PosTerminal({
             <Button variant="secondary" className="flex-1" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> {P.print}
             </Button>
+            {receipt?.customerPhone && (
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() =>
+                  window.open(
+                    `https://wa.me/${String(receipt.customerPhone).replace(/\D/g, "")}?text=${encodeURIComponent(
+                      `${receipt.shopName} — ${P.waReady} (${receipt.orderNumber} · ${money(receipt.total)})`,
+                    )}`,
+                    "_blank",
+                  )
+                }
+              >
+                <MessageCircle className="h-4 w-4 text-emerald-600" /> {P.waCustomer}
+              </Button>
+            )}
             <Button className="flex-1" onClick={() => setReceipt(null)}>
               <ReceiptIcon className="h-4 w-4" /> {P.newOrder}
             </Button>

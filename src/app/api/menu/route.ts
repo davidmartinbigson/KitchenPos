@@ -67,6 +67,13 @@ export async function POST(request: Request) {
           : Number.isFinite(Number(body.stockQty))
             ? Math.max(0, Math.round(Number(body.stockQty)))
             : null,
+      costPrice: Number.isFinite(Number(body.costPrice)) ? Math.max(0, Math.round(Number(body.costPrice))) : 0,
+      extras: Array.isArray(body.extras)
+        ? (body.extras as { name?: unknown; price?: unknown }[])
+            .map((e) => ({ name: String(e.name ?? "").trim().slice(0, 40), price: Math.max(0, Math.round(Number(e.price) || 0)) }))
+            .filter((e) => e.name.length > 0)
+            .slice(0, 10)
+        : [],
     })
     .returning();
 

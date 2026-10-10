@@ -26,6 +26,7 @@ export function SettingsForm({
     language: Lang;
     dailyOrderReset: boolean;
     addons?: Record<string, boolean>;
+    tableCount?: number;
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -37,6 +38,7 @@ export function SettingsForm({
   const [language, setLanguage] = useState<Lang>(initial.language);
   const [dailyCounter, setDailyCounter] = useState(initial.dailyOrderReset);
   const [addons, setAddons] = useState<Record<string, boolean>>(initial.addons ?? {});
+  const [tableCount, setTableCount] = useState(String(initial.tableCount ?? 12));
   const [saving, setSaving] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -53,6 +55,7 @@ export function SettingsForm({
           language,
           dailyOrderReset: dailyCounter,
           addons,
+          tableCount: Number(tableCount) || 12,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -220,6 +223,19 @@ export function SettingsForm({
                 );
               })}
             </div>
+            {addons.tables === true && (
+              <div className="mt-4 flex items-center gap-3">
+                <label className="text-sm font-semibold text-slate-700">{t.settings.tableCountLabel}</label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={60}
+                  value={tableCount}
+                  onChange={(e) => setTableCount(e.target.value)}
+                  className="w-24"
+                />
+              </div>
+            )}
           </Card>
 
           <Card className="p-6 sm:p-8">

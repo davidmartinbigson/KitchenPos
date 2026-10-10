@@ -29,6 +29,17 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     if (!name) return jsonError("NAME_PRICE_REQUIRED", 400);
     updates.name = name.slice(0, 120);
   }
+  if (body.costPrice !== undefined) {
+    updates.costPrice = Number.isFinite(Number(body.costPrice)) ? Math.max(0, Math.round(Number(body.costPrice))) : 0;
+  }
+  if (body.extras !== undefined) {
+    updates.extras = Array.isArray(body.extras)
+      ? (body.extras as { name?: unknown; price?: unknown }[])
+          .map((e) => ({ name: String(e.name ?? "").trim().slice(0, 40), price: Math.max(0, Math.round(Number(e.price) || 0)) }))
+          .filter((e) => e.name.length > 0)
+          .slice(0, 10)
+      : [];
+  }
   if (body.stockQty !== undefined) {
     updates.stockQty =
       body.stockQty === null || body.stockQty === ""

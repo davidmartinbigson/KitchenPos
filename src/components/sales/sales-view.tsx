@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, ChevronDown, Download, MessageCircle, Plus, Receipt, Sparkles, Trash2, TrendingUp, Trophy, Wallet } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
@@ -25,7 +25,7 @@ type OrderRow = {
   paymentMethod?: string;
   voidedAt?: string | null;
   voidReason?: string;
-  items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number }[];
+  items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number; costPrice?: number }[];
 };
 
 const PERIOD_DAYS = 30;
@@ -35,6 +35,136 @@ function dayRange(key: string) {
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   return { from: start.toISOString(), to: end.toISOString() };
+}
+
+type Shift = {
+  id: number;
+  openedAt: string;
+  openingCash: number;
+  closedAt: string | null;
+  expectedCash: number;
+  countedCash: number;
+  difference: number;
+};
+
+function ShiftPanel({
+  addons,
+  lang,
+  money,
+  t,
+}: {
+  addons: Record<string, boolean>;
+  lang: string;
+  money: (n: number) => string;
+  t: Record<string, string>;
+}) {
+  const S = t as { [k: string]: string };
+  const [active, setActive] = useState<Shift | null>(null);
+  const [recent, setRecent] = useState<Shift[]>([]);
+  const [openingInput, setOpeningInput] = useState("");
+  const [countedInput, setCountedInput] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!addons.cashShift) return;
+    try {
+      const res = await fetch("/api/shifts");
+      if (res.ok) {
+        const d = (await res.json()) as { active: Shift | null; recent: Shift[] };
+        setActive(d.active);
+        setRecent(d.recent ?? []);
+      }
+    } catch {
+      /* offline */
+    }
+  }, [addons.cashShift]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (!addons.cashShift) return null;
+
+  const act = async (action: "open" | "close", value: string) => {
+    setBusy(true);
+    try {
+      const body: Record<string, unknown> = { action };
+      if (action === "open") body.openingCash = Number(value) || 0;
+      else body.countedCash = Number(value) || 0;
+      const res = await fetch("/api/shifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setOpeningInput("");
+        setCountedInput("");
+        await load();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const timeFmt = (iso: string) =>
+    new Date(iso).toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div className="mt-5 rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-200">
+      {active ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+            {S.shiftOpen} · {timeFmt(active.openedAt)} · {S.openingCash}: {money(active.openingCash)}
+          </span>
+          <Input
+            value={countedInput}
+            onChange={(e) => setCountedInput(e.target.value.replace(/[^0-9]/g, ""))}
+            placeholder={S.countedCash}
+            inputMode="numeric"
+            className="h-9 w-36"
+          />
+          <Button size="sm" disabled={busy || countedInput === ""} onClick={() => act("close", countedInput)}>
+            {S.closeShift}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold text-violet-700">{S.noShiftOpen}</span>
+          <Input
+            value={openingInput}
+            onChange={(e) => setOpeningInput(e.target.value.replace(/[^0-9]/g, ""))}
+            placeholder={S.openingCash}
+            inputMode="numeric"
+            className="h-9 w-36"
+          />
+          <Button size="sm" variant="secondary" disabled={busy || openingInput === ""} onClick={() => act("open", openingInput)}>
+            {S.openShift}
+          </Button>
+        </div>
+      )}
+      {recent.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {recent.map((s) => (
+            <span
+              key={s.id}
+              className={cn(
+                "rounded-full px-3 py-1 text-[11px] font-bold ring-1",
+                s.difference === 0
+                  ? "bg-slate-100 text-slate-600 ring-slate-200"
+                  : s.difference > 0
+                    ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
+                    : "bg-red-100 text-red-700 ring-red-200",
+              )}
+            >
+              {timeFmt(s.openedAt)} · {S.expectedCash} {money(s.expectedCash)} · {S.countedCash} {money(s.countedCash)} ·{" "}
+              {S.difference} {s.difference > 0 ? "+" : ""}
+              {money(s.difference)}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function SalesView({ currency, addons = {} }: { currency: string; addons?: Record<string, boolean> }) {
@@ -96,10 +226,14 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
       m[k] = (m[k] ?? 0) + o.total;
       return m;
     }, {});
-  const dayOrderCount = orders?.length ?? 0;
-
   const expTotal = (expenses ?? []).reduce((s, e) => s + e.amount, 0);
   const bachat = dayRevenue - expTotal;
+  const itemCost = (orders ?? [])
+    .filter((o) => !o.voidedAt)
+    .reduce((s, o) => s + (o.items ?? []).reduce((x, it) => x + (it.costPrice ?? 0) * it.quantity, 0), 0);
+  const margin = dayRevenue - itemCost;
+  const netProfit = margin - expTotal;
+  const dayOrderCount = orders?.length ?? 0;
 
   const addExpense = async (event: FormEvent) => {
     event.preventDefault();
@@ -251,6 +385,24 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
             ))}
           </div>
         )}
+
+        {addons.profit === true && dayRevenue > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800 ring-1 ring-sky-200">
+              {S.itemMargin}: {money(margin)}
+            </span>
+            <span
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-bold ring-1",
+                netProfit >= 0 ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-red-100 text-red-700 ring-red-200",
+              )}
+            >
+              {S.netProfit}: {money(netProfit)}
+            </span>
+          </div>
+        )}
+
+        <ShiftPanel addons={addons} lang={lang} money={money} t={S} />
 
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           <div>

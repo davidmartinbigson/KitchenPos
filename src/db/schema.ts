@@ -32,6 +32,8 @@ export const users = pgTable("users", {
   dailyOrderReset: boolean("daily_order_reset").notNull().default(false),
   /** Opt-in extra features (Settings → Add-ons). Everything off by default. */
   addons: jsonb("addons").notNull().default({}),
+  /** Dine-in tables add-on: how many table QR cards to offer. */
+  tableCount: integer("table_count").notNull().default(12),
   /** Updated by the app heartbeat; master admin sees the restaurant as Online/Offline. */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -115,6 +117,10 @@ export const menuItems = pgTable(
     available: boolean("available").notNull().default(true),
   /** Remaining pieces for the optional stock add-on; null = unlimited. */
   stockQty: integer("stock_qty"),
+  /** Optional extras/add-ons for this item: [{ name, price }] (modifiers add-on). */
+  extras: jsonb("extras").notNull().default([]),
+  /** What this item costs us — feeds the daily-profit add-on. 0 = unknown. */
+  costPrice: integer("cost_price").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("menu_items_user_idx").on(table.userId)],
@@ -148,6 +154,8 @@ export const orders = pgTable(
   /** Void add-on: soft cancel keeping an audit trail (excluded from totals). */
   voidedAt: timestamp("voided_at", { withTimezone: true }),
   voidReason: text("void_reason").notNull().default(""),
+  /** Customer WhatsApp add-on: phone in international format for one-tap updates. */
+  customerPhone: text("customer_phone").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("orders_user_created_idx").on(table.userId, table.createdAt)],
@@ -169,6 +177,8 @@ export const orderItems = pgTable(
     lineTotal: integer("line_total").notNull(),
     /** Snapshot of the menu item's category, used for chef routing. */
     category: text("category").notNull().default(""),
+  /** Cost price at the time of sale (snapshot for profit reports). */
+  costPrice: integer("cost_price").notNull().default(0),
     /** Kitchen progression: new -> preparing -> ready */
     status: text("status").notNull().default("new"),
   },
@@ -208,6 +218,25 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 }));
 
 /** Daily shop expenses (Kharcha) — the "Aaj ki Bachat" day-close feature. */
+/** Cash-drawer shifts for the cashShift add-on. */
+export const shifts = pgTable(
+  "shifts",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+    openingCash: integer("opening_cash").notNull().default(0),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    expectedCash: integer("expected_cash").notNull().default(0),
+    countedCash: integer("counted_cash").notNull().default(0),
+    difference: integer("difference").notNull().default(0),
+    note: text("note").notNull().default(""),
+  },
+  (table) => [index("shifts_user_open_idx").on(table.userId, table.openedAt)],
+);
+
 export const expenses = pgTable(
   "expenses",
   {

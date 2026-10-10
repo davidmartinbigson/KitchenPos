@@ -64,6 +64,7 @@ export async function POST(request: Request) {
   }
 
   const customerName = String(body.customerName ?? "").trim().slice(0, 100);
+  const customerPhone = String(body.customerPhone ?? "").replace(/[^0-9+]/g, "").slice(0, 20);
 
   try {
     const result = await db.transaction(async (tx) => {
@@ -74,16 +75,22 @@ export async function POST(request: Request) {
         .where(and(eq(menuItems.userId, ownerId), inArray(menuItems.id, ids)));
 
       const productMap = new Map(products.map((p) => [p.id, p]));
+      const modifiersOn = addonEnabled(ownerPref?.addons, "modifiers");
       const priced = lines.map((line) => {
         const product = productMap.get(line.menuItemId);
         if (!product || !product.available) throw new Error("ITEM_UNAVAILABLE");
+        const extras = (product.extras as { name: string; price: number }[]) ?? [];
+        const ei = modifiersOn && body ? Number((line as { extraIndex?: unknown }).extraIndex) : NaN;
+        const extra = Number.isInteger(ei) && ei >= 0 && ei < extras.length ? extras[ei] : null;
+        const unitPrice = product.price + (extra?.price ?? 0);
         return {
           menuItemId: product.id,
-          name: product.name,
-          unitPrice: product.price,
+          name: extra ? `${product.name} + ${extra.name}` : product.name,
+          unitPrice,
           quantity: line.quantity,
-          lineTotal: product.price * line.quantity,
+          lineTotal: unitPrice * line.quantity,
           category: product.category,
+          costPrice: product.costPrice,
           status: "new",
         };
       });
@@ -158,6 +165,7 @@ export async function POST(request: Request) {
           orderNumber: (lastNumber ?? 0) + 1,
           dailyOrderNo: Number(todayCount ?? 0) + 1,
           customerName,
+          customerPhone: addonEnabled(ownerPref?.addons, "whatsappCustomer") ? customerPhone : "",
           subtotal,
           total,
           discountType,

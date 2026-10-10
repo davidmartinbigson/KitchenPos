@@ -18,7 +18,17 @@ export type AddonKey = (typeof ADDON_KEYS)[number];
 export type AddonsMap = Partial<Record<AddonKey, boolean>>;
 
 /** Add-ons that are fully built & usable right now. Others show a "soon" chip. */
-export const READY_ADDONS: AddonKey[] = ["discounts", "payments", "stock", "voids"];
+export const READY_ADDONS: AddonKey[] = [
+  "discounts",
+  "payments",
+  "stock",
+  "voids",
+  "modifiers",
+  "tables",
+  "cashShift",
+  "profit",
+  "whatsappCustomer",
+];
 
 export const ORDER_PAYMENT_METHODS = ["cash", "card", "jazzcash", "easypaisa", "bank"] as const;
 

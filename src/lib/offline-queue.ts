@@ -6,7 +6,7 @@
  * as connectivity returns. Nothing the cashier rings up is ever lost.
  */
 
-export type QueuedOrderItem = { menuItemId: number; quantity: number };
+export type QueuedOrderItem = { menuItemId: number; quantity: number; extraIndex?: number };
 
 export type QueuedOrder = {
   /** Client-generated id so we can track/replace queue entries safely. */
@@ -17,6 +17,7 @@ export type QueuedOrder = {
   items: QueuedOrderItem[];
   discount?: { type: string; value: number };
   paymentMethod?: string;
+  customerPhone?: string;
 };
 
 const QUEUE_KEY = "kpos_offline_orders_v1";

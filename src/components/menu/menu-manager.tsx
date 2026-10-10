@@ -34,6 +34,8 @@ type FormState = {
   description: string;
   price: string;
   stock: string;
+  cost: string;
+  extrasText: string;
   emoji: string;
   available: boolean;
   imageData: string | null;
@@ -45,6 +47,8 @@ const emptyForm: FormState = {
   description: "",
   price: "",
   stock: "",
+  cost: "",
+  extrasText: "",
   emoji: "🍽️",
   available: true,
   imageData: null,
@@ -112,6 +116,8 @@ export function MenuManager({
       description: item.description,
       price: String(item.price),
       stock: item.stockQty == null ? "" : String(item.stockQty),
+      cost: item.costPrice ? String(item.costPrice) : "",
+      extrasText: (item.extras ?? []).map((e) => `${e.name}=${e.price}`).join("\n"),
       emoji: item.emoji,
       available: item.available,
       imageData: item.imageData,
@@ -149,6 +155,18 @@ export function MenuManager({
       description: form.description.trim(),
       price,
       stockQty: form.stock === "" ? null : Math.max(0, Math.round(Number(form.stock) || 0)),
+      costPrice: form.cost === "" ? 0 : Math.max(0, Math.round(Number(form.cost) || 0)),
+      extras: form.extrasText
+        .split("\n")
+        .map((row) => {
+          const parts = row.split("=");
+          return {
+            name: (parts[0] ?? "").trim().slice(0, 40),
+            price: Math.max(0, Math.round(Number((parts[1] ?? "").trim()) || 0)),
+          };
+        })
+        .filter((e) => e.name)
+        .slice(0, 10),
       emoji: form.emoji,
       available: form.available,
       imageData: form.imageData,
@@ -541,6 +559,24 @@ export function MenuManager({
                   value={form.stock}
                   onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
                   placeholder={M.stockQtyPh}
+                />
+              </Field>
+              <Field label={M.costPrice} hint={M.costPriceHint}>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={form.cost}
+                  onChange={(e) => setForm((p) => ({ ...p, cost: e.target.value }))}
+                />
+              </Field>
+              <Field label={M.extrasLabel} hint={M.extrasHint}>
+                <Textarea
+                  rows={3}
+                  value={form.extrasText}
+                  onChange={(e) => setForm((p) => ({ ...p, extrasText: e.target.value }))}
+                  placeholder={"Extra Cheese=120\nLarge=150"}
                 />
               </Field>
             </div>

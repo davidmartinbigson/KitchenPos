@@ -1,15 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { QrCode, Link2, Download, Printer } from "lucide-react";
+import { QrCode, Link2, Download, Printer, UtensilsCrossed } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useI18n } from "@/components/providers/language-provider";
 
-export function QrMenuCard({ restaurantId, shopName }: { restaurantId: number; shopName: string }) {
+export function QrMenuCard({
+  restaurantId,
+  shopName,
+  addons = {},
+  tableCount = 12,
+}: {
+  restaurantId: number;
+  shopName: string;
+  addons?: Record<string, boolean>;
+  tableCount?: number;
+}) {
   const { lang } = useI18n();
   const [menuUrl, setMenuUrl] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copied, setCopied] = useState(false);
+
+  const tablesOn = addons.tables === true;
+  const count = Math.min(60, Math.max(2, tableCount));
 
   const L =
     lang === "ur"
@@ -22,6 +35,10 @@ export function QrMenuCard({ restaurantId, shopName }: { restaurantId: number; s
           download: "QR ڈاؤن لوڈ",
           print: "پرنٹ کارڈ",
           scan: "آرڈر کرنے کے لیے اسکین کریں",
+          tablesTitle: "ٹیبل QR کارڈز",
+          tablesDesc: "ہر ٹیبل کا اپنا QR — آرڈر اسی ٹیبل کے نام سے آئے گا۔",
+          printAll: "سب ٹیبل کارڈز پرنٹ کریں",
+          table: "ٹیبل",
         }
       : {
           title: "QR Menu — Table Ordering",
@@ -32,6 +49,10 @@ export function QrMenuCard({ restaurantId, shopName }: { restaurantId: number; s
           download: "Download QR",
           print: "Print card",
           scan: "Scan to order",
+          tablesTitle: "Table QR cards",
+          tablesDesc: "Each table has its own QR — the order arrives tagged with that table's name.",
+          printAll: "Print all table cards",
+          table: "Table",
         };
 
   useEffect(() => {
@@ -69,29 +90,59 @@ export function QrMenuCard({ restaurantId, shopName }: { restaurantId: number; s
     a.click();
   }
 
+  const cardHtml = (qr: string, label: string, sub: string) => `
+<div class="card">
+  ${sub ? `<p class="table">${sub}</p>` : ""}
+  <h1>${label}</h1>
+  <p>Order from your table — no app needed</p>
+  <img class="qr" src="${qr}" alt="Menu QR code" />
+  <p>Point your phone camera at the code</p>
+  <div class="badge">${L.scan}</div>
+</div>`;
+
+  const pageStyle = `<style>
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;display:flex;flex-wrap:wrap;gap:16px;justify-content:center;padding:20px;background:#fff}
+  .card{border:3px solid #f97316;border-radius:28px;padding:24px;text-align:center;width:320px;break-inside:avoid}
+  .qr{width:240px;height:240px;margin:12px auto}
+  h1{margin:0;font-size:22px;color:#0f172a}
+  p{margin:6px 0 0;color:#64748b;font-size:13px}
+  .table{margin:0 0 4px;font-size:15px;font-weight:800;color:#f97316;letter-spacing:1px}
+  .badge{display:inline-block;margin-top:14px;background:#f97316;color:#fff;font-weight:700;padding:8px 18px;border-radius:999px;font-size:13px}
+  @media print{.card{page-break-inside:avoid}}
+</style>`;
+
   function printCard() {
     if (!qrDataUrl) return;
     const w = window.open("", "_blank", "width=520,height=700");
     if (!w) return;
-    w.document.write(`<!doctype html><html><head><title>${shopName} — QR Menu</title>
-<style>
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fff}
-  .card{border:3px solid #f97316;border-radius:28px;padding:36px;text-align:center;max-width:380px}
-  .qr{width:280px;height:280px;margin:16px auto}
-  h1{margin:0;font-size:26px;color:#0f172a}
-  p{margin:8px 0 0;color:#64748b;font-size:14px}
-  .badge{display:inline-block;margin-top:18px;background:#f97316;color:#fff;font-weight:700;padding:10px 22px;border-radius:999px;font-size:15px}
-</style></head><body>
-<div class="card">
-  <h1>${shopName}</h1>
-  <p>Order from your table — no app needed</p>
-  <img class="qr" src="${qrDataUrl}" alt="Menu QR code" />
-  <p>Point your phone camera at the code</p>
-  <div class="badge">${L.scan}</div>
-</div></body></html>`);
+    w.document.write(`<!doctype html><html><head><title>${shopName} — QR</title>${pageStyle}</head><body>${cardHtml(qrDataUrl, shopName, "")}</body></html>`);
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 400);
+  }
+
+  async function printAllTables() {
+    try {
+      const QRCode = await import("qrcode");
+      const imgs = await Promise.all(
+        Array.from({ length: count }, (_, i) =>
+          QRCode.toDataURL(`${window.location.origin}/r/${restaurantId}?table=${i + 1}`, {
+            width: 480,
+            margin: 1,
+            color: { dark: "#0f172a", light: "#ffffff" },
+          }),
+        ),
+      );
+      const w = window.open("", "_blank", "width=1100,height=800");
+      if (!w) return;
+      const cards = imgs.map((img, i) => cardHtml(img, shopName, `${L.table} ${i + 1}`)).join("");
+      w.document.write(`<!doctype html><html><head><title>${shopName} — ${L.tablesTitle}</title>${pageStyle}</head><body>${cards}</body></html>`);
+      w.document.close();
+      w.focus();
+      setTimeout(() => w.print(), 600);
+    } catch {
+      /* qrcode load failed */
+    }
   }
 
   return (
@@ -128,6 +179,21 @@ export function QrMenuCard({ restaurantId, shopName }: { restaurantId: number; s
               <Printer className="h-4 w-4" /> {L.print}
             </Button>
           </div>
+
+          {tablesOn && (
+            <div className="mt-5 rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-200">
+              <div className="flex items-center gap-2">
+                <UtensilsCrossed className="h-4 w-4 text-violet-600" />
+                <p className="text-sm font-bold text-violet-800">{L.tablesTitle}</p>
+              </div>
+              <p className="mt-1 text-xs text-violet-700">
+                {L.table} 1 – {count} · {L.tablesDesc}
+              </p>
+              <Button variant="secondary" className="mt-3" onClick={printAllTables}>
+                <Printer className="h-4 w-4" /> {L.printAll}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </Card>

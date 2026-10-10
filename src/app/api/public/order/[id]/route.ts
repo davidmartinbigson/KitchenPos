@@ -4,16 +4,17 @@ import { db } from "@/db";
 import { menuItems, orderItems, orders, users } from "@/db/schema";
 import { jsonError, parseId } from "@/lib/api";
 import { accessState } from "@/lib/access";
+import { addonEnabled } from "@/lib/addons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
-type IncomingLine = { menuItemId: unknown; quantity: unknown };
+type IncomingLine = { menuItemId: unknown; quantity: unknown; extraIndex?: unknown };
 
 /**
  * Public guest ordering endpoint (QR table menu). No login required —
- * prices and availability are always re-checked against the database.
+ * prices, extras, availability and stock are always re-checked against the database.
  */
 export async function POST(request: Request, { params }: RouteContext) {
   const userId = parseId((await params).id);
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const lines = rawLines.map((line) => ({
     menuItemId: Number(line.menuItemId),
     quantity: Math.floor(Number(line.quantity)),
+    extraIndex: Number(line.extraIndex),
   }));
   if (lines.some((l) => !Number.isInteger(l.menuItemId) || l.quantity < 1 || l.quantity > 20)) {
     return jsonError("CART_INVALID", 400);
@@ -49,15 +51,23 @@ export async function POST(request: Request, { params }: RouteContext) {
   const byId = new Map(menu.map((m) => [m.id, m]));
   if (menu.length !== ids.length) return jsonError("CART_INVALID", 400);
 
+  const modifiersOn = addonEnabled(restaurant.addons, "modifiers");
   const priced = lines.map((l) => {
     const item = byId.get(l.menuItemId)!;
+    const extras = (item.extras as { name: string; price: number }[]) ?? [];
+    const extra =
+      modifiersOn && Number.isInteger(l.extraIndex) && l.extraIndex >= 0 && l.extraIndex < extras.length
+        ? extras[l.extraIndex]
+        : null;
+    const unitPrice = item.price + (extra?.price ?? 0);
     return {
       menuItemId: item.id,
-      name: item.name,
+      name: extra ? `${item.name} + ${extra.name}` : item.name,
       category: item.category,
-      unitPrice: item.price,
+      unitPrice,
+      costPrice: item.costPrice,
       quantity: l.quantity,
-      lineTotal: item.price * l.quantity,
+      lineTotal: unitPrice * l.quantity,
     };
   });
   const total = priced.reduce((s, l) => s + l.lineTotal, 0);
@@ -66,53 +76,74 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const customerName = String(body.customerName ?? "").trim().slice(0, 100);
 
-  const result = await db.transaction(async (tx) => {
-    const latest = await tx.query.orders.findFirst({
-      where: eq(orders.userId, userId),
-      orderBy: (t, { desc }) => [desc(t.orderNumber)],
-    });
-    const orderNumber = (latest?.orderNumber ?? 0) + 1;
-    const PKT_MIN = 300;
-    const localNow = new Date(Date.now() + PKT_MIN * 60_000);
-    const dayStartMs =
-      Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate()) - PKT_MIN * 60_000;
-    const [{ value: todayCount }] = await tx
-      .select({ value: count(orders.id) })
-      .from(orders)
-      .where(and(eq(orders.userId, userId), gte(orders.createdAt, new Date(dayStartMs))));
-    const [order] = await tx
-      .insert(orders)
-      .values({
-        userId,
-        orderNumber,
-        dailyOrderNo: Number(todayCount ?? 0) + 1,
-        customerName,
-        takenBy: "QR Order",
-        subtotal: total,
-        total,
-        amountReceived: total,
-        changeDue: 0,
-        itemCount,
-      })
-      .returning({
-        id: orders.id,
-        orderNumber: orders.orderNumber,
-        dailyOrderNo: orders.dailyOrderNo,
-        total: orders.total,
+  let result: { id: number; orderNumber: number; dailyOrderNo: number; total: number };
+  try {
+    result = await db.transaction(async (tx) => {
+      // If the owner tracks stock for an item, a guest order consumes it too.
+      for (const line of priced) {
+        const row = byId.get(line.menuItemId)!;
+        if (row.stockQty != null) {
+          if (row.stockQty < line.quantity) throw new Error("STOCK_SHORT");
+          await tx
+            .update(menuItems)
+            .set({ stockQty: row.stockQty - line.quantity })
+            .where(eq(menuItems.id, row.id));
+        }
+      }
+
+      const latest = await tx.query.orders.findFirst({
+        where: eq(orders.userId, userId),
+        orderBy: (t, { desc }) => [desc(t.orderNumber)],
       });
-    await tx.insert(orderItems).values(
-      priced.map((l) => ({
-        orderId: order.id,
-        menuItemId: l.menuItemId,
-        name: l.name,
-        unitPrice: l.unitPrice,
-        quantity: l.quantity,
-        lineTotal: l.lineTotal,
-        category: l.category,
-      })),
-    );
-    return order;
-  });
+      const orderNumber = (latest?.orderNumber ?? 0) + 1;
+      const PKT_MIN = 300;
+      const localNow = new Date(Date.now() + PKT_MIN * 60_000);
+      const dayStartMs =
+        Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate()) -
+        PKT_MIN * 60_000;
+      const [{ value: todayCount }] = await tx
+        .select({ value: count(orders.id) })
+        .from(orders)
+        .where(and(eq(orders.userId, userId), gte(orders.createdAt, new Date(dayStartMs))));
+
+      const [order] = await tx
+        .insert(orders)
+        .values({
+          userId,
+          orderNumber,
+          dailyOrderNo: Number(todayCount ?? 0) + 1,
+          customerName,
+          takenBy: "QR Order",
+          subtotal: total,
+          total,
+          amountReceived: total,
+          changeDue: 0,
+          itemCount,
+        })
+        .returning({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          dailyOrderNo: orders.dailyOrderNo,
+          total: orders.total,
+        });
+      await tx.insert(orderItems).values(
+        priced.map((l) => ({
+          orderId: order.id,
+          menuItemId: l.menuItemId,
+          name: l.name,
+          unitPrice: l.unitPrice,
+          quantity: l.quantity,
+          lineTotal: l.lineTotal,
+          category: l.category,
+          costPrice: l.costPrice,
+        })),
+      );
+      return order;
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "STOCK_SHORT") return jsonError("STOCK_SHORT", 409);
+    throw e;
+  }
 
   const displayOrderNo = restaurant.dailyOrderReset ? result.dailyOrderNo : result.orderNumber;
   return NextResponse.json({ orderNumber: displayOrderNo, total: result.total }, { status: 201 });

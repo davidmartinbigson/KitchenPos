@@ -8,4 +8,6 @@ export type MenuItemDTO = {
   emoji: string;
   available: boolean;
   stockQty?: number | null;
+  extras?: { name: string; price: number }[];
+  costPrice?: number;
 };

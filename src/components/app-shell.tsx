@@ -80,6 +80,20 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
   const navItems = isOwner ? ownerNav : cashierNav;
   const mobileItems = isOwner ? mobileOwnerNav : cashierNav;
 
+  // Lazy daily-summary trigger: once per day per device, when the owner opens the app
+  // in the evening (server validates the time window + sends only for this owner).
+  useEffect(() => {
+    if (!isOwner) return;
+    try {
+      const flagKey = `kp-daily-summary-${new Date().toDateString()}`;
+      if (sessionStorage.getItem(flagKey)) return;
+      sessionStorage.setItem(flagKey, "1");
+      fetch("/api/cron/daily-summary?auto=1").catch(() => {});
+    } catch {
+      /* sessionStorage unavailable */
+    }
+  }, [isOwner]);
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");

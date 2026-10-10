@@ -18,6 +18,7 @@ export default async function SettingsPage() {
         language: user.language === "ur" ? "ur" : "en",
         dailyOrderReset: user.dailyOrderReset,
         addons: parseAddons(user.addons),
+        tableCount: user.tableCount,
       }}
     />
   );

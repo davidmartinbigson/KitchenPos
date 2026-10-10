@@ -99,6 +99,7 @@ export async function getCurrentUser() {
       itemLimit: users.itemLimit,
       dailyOrderReset: users.dailyOrderReset,
       addons: users.addons,
+      tableCount: users.tableCount,
       lastSeenAt: users.lastSeenAt,
     })
     .from(users)

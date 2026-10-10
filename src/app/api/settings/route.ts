@@ -45,6 +45,10 @@ export async function PATCH(request: Request) {
   if (body.dailyOrderReset !== undefined) {
     updates.dailyOrderReset = Boolean(body.dailyOrderReset);
   }
+  if (body.tableCount !== undefined) {
+    const n = Math.round(Number(body.tableCount));
+    if (Number.isFinite(n)) updates.tableCount = Math.min(60, Math.max(2, n));
+  }
   if (body.addons !== undefined) {
     const [row] = await db.select({ addons: users.addons }).from(users).where(eq(users.id, user.id));
     updates.addons = mergeAddons(row?.addons, body.addons);
@@ -68,6 +72,7 @@ export async function PATCH(request: Request) {
       language: users.language,
       dailyOrderReset: users.dailyOrderReset,
       addons: users.addons,
+      tableCount: users.tableCount,
     });
 
   return NextResponse.json({ user: updated });
