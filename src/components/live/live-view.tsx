@@ -27,7 +27,7 @@ export function LiveView({ currency }: { currency: string }) {
   const L =
     lang === "ur"
       ? {
-          title: "لائیو ڈیجی والے بابو صاحب",
+          title: "لائیو سیل",
           sale: "آج کی سیل",
           orders: "آرڈرز",
           bachat: "بچت (سیل − خرچہ)",
