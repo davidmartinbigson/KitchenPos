@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   /** ISO country code (PK, US, GB, ...) picked at signup; drives the default currency. */
   country: text("country").notNull().default("PK"),
   language: text("language").notNull().default("en"),
+  /** Vanity public menu URL: /menu/<slug> (unique, backfilled by 0009; old /r/<id> still works). */
+  slug: text("slug"),
   /** "owner" = shop owner customer, "admin" = master admin (you). */
   role: text("role").notNull().default("owner"),
   /** Master admin can suspend a customer without deleting their data. */

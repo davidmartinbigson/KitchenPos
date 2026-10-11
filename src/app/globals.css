@@ -384,7 +384,8 @@ input[type="number"] {
 }
 
 /* Print sheet: rendered off-screen on screen, becomes the ONLY printed content */
-#print-sheet {
+#print-sheet,
+#notifier-print-sheet {
   position: fixed;
   left: -12000px;
   top: 0;
@@ -413,10 +414,13 @@ input[type="number"] {
     visibility: hidden !important;
   }
   #print-sheet,
-  #print-sheet * {
+  #print-sheet *,
+  #notifier-print-sheet,
+  #notifier-print-sheet * {
     visibility: visible !important;
   }
-  #print-sheet {
+  #print-sheet,
+  #notifier-print-sheet {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;

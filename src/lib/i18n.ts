@@ -544,6 +544,18 @@ export const en = {
       kitchenStats: { name: "Kitchen pulse", desc: "Average prep time, done-today count and busiest hours — on the Sales page." },
     },
   },
+  notifier: {
+    title: "QR orders",
+    subtitle: "Table orders from your menu QR",
+    pending: "New",
+    completedToday: "Completed today",
+    empty: "No QR orders right now — new ones pop up here.",
+    complete: "Complete",
+    completing: "Completing...",
+    completed: "Completed ✓",
+    print: "Print receipt",
+    guest: "Guest",
+  },
 };
 
 export type Dict = typeof en;
@@ -1088,6 +1100,18 @@ export const ur: Dict = {
       receiptBrand: { name: "رسید برانڈنگ", desc: "پرنٹ بل پر اپنا لوگو، اوپر اور نیچے اپنی لکیریں لگائیں۔" },
       kitchenStats: { name: "کچن پلس", desc: "اوسط تیاری وقت، آج مکمل اور رش والے گھنٹے — سیلز پیج پر۔" },
     },
+  },
+  notifier: {
+    title: "QR آرڈرز",
+    subtitle: "مینیو QR سے آنے والے ٹیبل آرڈرز",
+    pending: "نئے",
+    completedToday: "آج مکمل شدہ",
+    empty: "ابھی کوئی QR آرڈر نہیں — نئے آرڈر یہاں نظر آئیں گے۔",
+    complete: "مکمل کریں",
+    completing: "مکمل ہو رہا ہے...",
+    completed: "مکمل ✓",
+    print: "رسید پرنٹ کریں",
+    guest: "مہمان",
   },
 };
 

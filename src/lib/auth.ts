@@ -97,6 +97,7 @@ export async function getCurrentUser() {
       suspended: users.suspended,
       accessExpiresAt: users.accessExpiresAt,
       itemLimit: users.itemLimit,
+      slug: users.slug,
       dailyOrderReset: users.dailyOrderReset,
       addons: users.addons,
       tableCount: users.tableCount,

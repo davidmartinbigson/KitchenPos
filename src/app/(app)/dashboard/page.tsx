@@ -15,6 +15,7 @@ export default async function DashboardPage() {
         shopName={user.shopName}
         addons={parseAddons(user.addons)}
         tableCount={user.tableCount}
+        slug={user.slug}
       />
     </div>
   );

@@ -22,6 +22,7 @@ import {
   Radio,
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
+import { OrderNotifier } from "@/components/orders/order-notifier";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/components/ui";
@@ -314,6 +315,9 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
           </button>
         )}
       </nav>
+
+      {/* Owner-only floating QR-order inbox: new table orders, Complete + Print */}
+      {isOwner && <OrderNotifier />}
     </div>
   );
 }

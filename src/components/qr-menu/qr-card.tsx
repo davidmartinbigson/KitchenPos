@@ -10,11 +10,14 @@ export function QrMenuCard({
   shopName,
   addons = {},
   tableCount = 12,
+  slug = null,
 }: {
   restaurantId: number;
   shopName: string;
   addons?: Record<string, boolean>;
   tableCount?: number;
+  /** Vanity path /menu/<slug>; falls back to legacy /r/<id> when missing. */
+  slug?: string | null;
 }) {
   const { lang } = useI18n();
   const [menuUrl, setMenuUrl] = useState("");
@@ -55,8 +58,10 @@ export function QrMenuCard({
           table: "Table",
         };
 
+  const menuPath = slug ? `/menu/${slug}` : `/r/${restaurantId}`;
+
   useEffect(() => {
-    const url = `${window.location.origin}/r/${restaurantId}`;
+    const url = `${window.location.origin}${menuPath}`;
     setMenuUrl(url);
     let cancelled = false;
     import("qrcode")
@@ -70,7 +75,7 @@ export function QrMenuCard({
     return () => {
       cancelled = true;
     };
-  }, [restaurantId]);
+  }, [menuPath, restaurantId]);
 
   async function copyLink() {
     try {
@@ -126,7 +131,7 @@ export function QrMenuCard({
       const QRCode = await import("qrcode");
       const imgs = await Promise.all(
         Array.from({ length: count }, (_, i) =>
-          QRCode.toDataURL(`${window.location.origin}/r/${restaurantId}?table=${i + 1}`, {
+          QRCode.toDataURL(`${window.location.origin}${menuPath}?table=${i + 1}`, {
             width: 480,
             margin: 1,
             color: { dark: "#0f172a", light: "#ffffff" },

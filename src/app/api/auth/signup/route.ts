@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { jsonError } from "@/lib/api";
 import { sendWelcomeEmail, supportEmail } from "@/lib/mail";
+import { signupSlug } from "@/lib/slug";
 import { currencyForCountry, isCountryCode, DEFAULT_COUNTRY } from "@/lib/countries";
 
 export async function POST(request: Request) {
@@ -57,6 +58,12 @@ export async function POST(request: Request) {
       country: users.country,
       language: users.language,
     });
+
+  // Vanity menu link /menu/<slug> — deterministic & unique (mirrors the 0009 backfill).
+  await db
+    .update(users)
+    .set({ slug: signupSlug(created.shopName, created.id) })
+    .where(eq(users.id, created.id));
 
   let welcomeEmailSent = false;
   try {
