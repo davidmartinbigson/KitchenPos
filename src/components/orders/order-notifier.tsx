@@ -44,6 +44,19 @@ type ShopPrefs = {
 
 const POLL_MS = 12_000;
 
+/** Group receipt lines by category — one counter slip per category (same as POS). */
+function slipGroups(items: NotifierItem[]) {
+  const map = new Map<string, { category: string; lines: NotifierItem[]; qty: number }>();
+  for (const line of items) {
+    const cat = line.category.trim() || "General";
+    const group = map.get(cat) ?? { category: cat, lines: [], qty: 0 };
+    group.lines.push(line);
+    group.qty += line.quantity;
+    map.set(cat, group);
+  }
+  return [...map.values()];
+}
+
 /** Same local-day check the Sales page uses (device timezone). */
 function sameLocalDay(a: Date, b: Date) {
   return (
@@ -381,6 +394,34 @@ export function OrderNotifier() {
       {/* Hidden print sheet (only content printed by window.print) */}
       {printOrder && (
         <div id="notifier-print-sheet" aria-hidden="true">
+          {slipGroups(printOrder.items).map((group, index, groups) => (
+            <div
+              key={group.category}
+              className="print-slip"
+              style={prefs.receiptSize === "58" ? { width: "58mm" } : undefined}
+            >
+              <p className="ps-shop">{prefs.shopName}</p>
+              <p className="ps-label">{P.counterSlip}</p>
+              <p className="ps-category">{group.category}</p>
+              <p className="ps-meta">
+                {P.orderNo}
+                {formatNumber(displayNo(printOrder), lang)} · {formatDate(printOrder.createdAt, lang)} ·{" "}
+                {formatTime(printOrder.createdAt, lang)}
+              </p>
+              {printOrder.customerName && <p className="ps-meta">{printOrder.customerName}</p>}
+              <div className="ps-div" />
+              {group.lines.map((line) => (
+                <p key={line.id} className="ps-line">
+                  {formatNumber(line.quantity, lang)} × {line.name}
+                </p>
+              ))}
+              <div className="ps-div" />
+              <p className="ps-meta">
+                {P.qty}: {formatNumber(group.qty, lang)} · {formatNumber(index + 1, lang)}/
+                {formatNumber(groups.length + 1, lang)}
+              </p>
+            </div>
+          ))}
           <div className="print-slip" style={prefs.receiptSize === "58" ? { width: "58mm" } : undefined}>
             {prefs.receiptLogo ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -279,19 +279,25 @@ export function KitchenDisplay({
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="rounded-lg bg-white/10 px-2.5 py-1 text-sm font-black">
-                            #{order.orderNumber}
-                          </span>
-                          <span className={cn("flex items-center gap-1 text-xs font-bold", late ? "text-rose-300" : "text-slate-400")}>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="shrink-0 rounded-lg bg-white/10 px-2.5 py-1 text-sm font-black">
+                              #{order.orderNumber}
+                            </span>
+                            <span className="truncate text-base font-black text-white">
+                              {order.customerName || K.customer}
+                            </span>
+                          </div>
+                          <span className={cn("flex shrink-0 items-center gap-1 text-xs font-bold", late ? "text-rose-300" : "text-slate-400")}>
                             <AlarmClock className="h-3.5 w-3.5" />
                             {mins === 0 ? K.justNow : `${formatNumber(mins, lang)} ${K.min}`}
                             {late && ` · ${K.late}`}
                           </span>
                         </div>
-                        <p className="mt-2 truncate text-xs text-slate-400">
-                          {order.customerName || K.customer}
-                          {order.takenBy && <span> · {K.by} {order.takenBy}</span>}
-                        </p>
+                        {order.takenBy && (
+                          <p className="mt-1 truncate text-xs text-slate-400">
+                            {K.by} {order.takenBy}
+                          </p>
+                        )}
 
                         <ul className="mt-3 space-y-2">
                           {scoped.map((item) => (
