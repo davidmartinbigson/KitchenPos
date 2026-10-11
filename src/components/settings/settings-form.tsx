@@ -179,10 +179,10 @@ export function SettingsForm({
                 </Select>
               </Field>
               <Field label={t.settings.city}>
-                <Input maxLength={80} value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Karachi" />
+                <Input maxLength={80} value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. London / Karachi / Dubai" />
               </Field>
               <Field label={t.settings.area} hint={t.settings.locationHint}>
-                <Input maxLength={120} value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Clifton Block 5" />
+                <Input maxLength={120} value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Soho / Downtown / Jumeirah" />
               </Field>
             </div>
             <div className="mt-5">

@@ -230,7 +230,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                           value={form.shopName}
                           onChange={update("shopName")}
                           className="ps-12"
-                          placeholder="e.g. Karachi Biryani House"
+                          placeholder="e.g. Golden Fork Bistro"
                         />
                       </div>
                     </Field>
@@ -256,7 +256,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                           value={form.city}
                           onChange={update("city")}
                           maxLength={80}
-                          placeholder="e.g. Karachi"
+                          placeholder="e.g. London / Karachi / Dubai"
                           autoComplete="address-level2"
                         />
                       </Field>
@@ -265,7 +265,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                           value={form.area}
                           onChange={update("area")}
                           maxLength={120}
-                          placeholder="e.g. Clifton Block 5"
+                          placeholder="e.g. Soho / Downtown / Jumeirah"
                         />
                       </Field>
                     </div>

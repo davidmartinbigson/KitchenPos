@@ -194,7 +194,7 @@ export const en = {
     city: "City",
     cityHint: "Helps nearby customers discover you",
     area: "Area / neighbourhood",
-    areaHint: "e.g. Clifton Block 5, DHA Phase 2",
+    areaHint: "e.g. Soho, Clifton Block 5, Jumeirah",
   },
   dashboard: {
     welcome: "Welcome",
@@ -394,7 +394,7 @@ export const en = {
     crmVisits: "visits",
     crmSpent: "spent",
     crmEmpty: "No customers with saved phone numbers yet. Turn on the WhatsApp add-on and save phones at checkout.",
-    crmWaMsg: "Assalam o Alaikum! We miss you at our restaurant — drop by for your favorite dish soon! 🍽️",
+    crmWaMsg: "Hello! We miss you at our restaurant — drop by for your favorite dish soon! 🍽️",
   },
   kitchen: {
     title: "Kitchen Display",
@@ -535,7 +535,7 @@ export const en = {
     days: "Days",
     quantity: "How many keys",
     note: "Note (optional)",
-    notePlaceholder: "e.g. For Karachi Biryani House",
+    notePlaceholder: "e.g. For Golden Fork Bistro",
     generated: "keys generated",
     copy: "Copy",
     copied: "Copied!",
@@ -625,7 +625,7 @@ export const en = {
     receiptFooterPh: "e.g. Wifi: shahdara-123",
     addonList: {
       discounts: { name: "Checkout discount", desc: "Take % or a flat amount off the bill at checkout." },
-      payments: { name: "Payment methods", desc: "Tag orders Cash, Card, JazzCash, Easypaisa or Bank and see the day split." },
+      payments: { name: "Payment methods", desc: "Extra payment options beyond cash — add your own names (online payment, card, bank…) and see the day split." },
       stock: { name: "Stock tracking", desc: "Set quantities per item; POS and QR orders reduce stock and stop when sold out." },
       voids: { name: "Void orders", desc: "Cancel orders with a reason. They stay in the log but leave the totals." },
       modifiers: { name: "Extras & sizes", desc: "Add-ons like extra cheese, or small / large sizes, with price changes." },
@@ -1948,7 +1948,7 @@ export const ar: Dict = {
     receiptFooterPh: "مثال: WiFi: my-cafe-123",
     addonList: {
       discounts: { name: "خصم عند الدفع", desc: "خصم نسبة % أو مبلغًا ثابتًا من الفاتورة عند الدفع." },
-      payments: { name: "طرق الدفع", desc: "وسّم الطلبات نقدي أو بطاقة أو JazzCash أو Easypaisa أو بنكي وشاهد توزيع اليوم." },
+      payments: { name: "طرق الدفع", desc: "خيارات دفع إضافية غير النقد — أضف أسماءك (دفع إلكتروني، بطاقة، تحويل…) وشاهد توزيع اليوم." },
       stock: { name: "تتبع المخزون", desc: "حدد كمية لكل صنف؛ طلبات POS وQR تخفض المخزون وتتوقف عند النفاد." },
       voids: { name: "إلغاء الطلبات", desc: "ألغِ الطلبات مع ذكر السبب. تبقى في السجل لكن خارج الإجماليات." },
       modifiers: { name: "إضافات وأحجام", desc: "إضافات كالجبنة الزائدة أو أحجام صغير/كبير مع تغيير السعر." },

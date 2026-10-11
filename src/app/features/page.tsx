@@ -31,7 +31,7 @@ const addons = [
   },
   {
     icon: Landmark, name: "Payment Methods", tagline: "Cash, card, wallets — all split out",
-    desc: "Track how customers actually pay: cash, card, JazzCash, Easypaisa, bank transfer. Day-close shows a clean per-method split.",
+    desc: "Track how customers actually pay: cash is built in, add your own names — online payment, card, bank transfer. Day-close shows a clean per-method split.",
     points: ["5 payment methods", "Day-close payment split chips", "Audit-ready records"],
   },
   {

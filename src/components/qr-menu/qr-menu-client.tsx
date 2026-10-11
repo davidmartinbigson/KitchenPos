@@ -28,7 +28,7 @@ const STR = {
     yourOrder: "Your order",
     each: "each",
     nameLabel: "Your name or table (optional)",
-    namePh: "e.g. Ahmed / Table 5",
+    namePh: "e.g. Alex / Table 5",
     notePh: "✎ Note (e.g. less spicy)",
     subtotal: "Subtotal",
     tax: "Tax",
