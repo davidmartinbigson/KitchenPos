@@ -34,6 +34,8 @@ export const users = pgTable("users", {
   dailyOrderReset: boolean("daily_order_reset").notNull().default(false),
   /** Opt-in extra features (Settings → Add-ons). Everything off by default. */
   addons: jsonb("addons").notNull().default({}),
+  /** Payments add-on: owner-defined method names; cash is always built in. */
+  paymentMethods: jsonb("payment_methods").notNull().default(["online-payment"]),
   /** Dine-in tables add-on: how many table QR cards to offer. */
   tableCount: integer("table_count").notNull().default(12),
   /** Receipt branding add-on (printed bill customisation). */

@@ -100,6 +100,7 @@ export async function getCurrentUser() {
       slug: users.slug,
       dailyOrderReset: users.dailyOrderReset,
       addons: users.addons,
+      paymentMethods: users.paymentMethods,
       tableCount: users.tableCount,
       receiptHeader: users.receiptHeader,
       receiptFooter: users.receiptFooter,

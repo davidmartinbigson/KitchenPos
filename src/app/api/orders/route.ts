@@ -3,7 +3,8 @@ import { and, count, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders, users } from "@/db/schema";
 import { jsonError, requireActiveUser, requireApp } from "@/lib/api";
-import { addonEnabled, ORDER_PAYMENT_METHODS } from "@/lib/addons";
+import { addonEnabled } from "@/lib/addons";
+import { matchPaymentMethod } from "@/lib/payment-methods";
 
 type IncomingLine = { menuItemId: unknown; quantity: unknown };
 
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   const { session, ownerId } = guard;
 
   const [ownerPref] = await db
-    .select({ dailyOrderReset: users.dailyOrderReset, addons: users.addons, taxRate: users.taxRate })
+    .select({ dailyOrderReset: users.dailyOrderReset, addons: users.addons, taxRate: users.taxRate, paymentMethods: users.paymentMethods })
     .from(users)
     .where(eq(users.id, ownerId));
 
@@ -133,12 +134,11 @@ export async function POST(request: Request) {
           ? String(body.orderType)
           : "dine-in";
 
-      // Add-on: payment method tag.
-      const paymentMethod =
-        addonEnabled(ownerPref?.addons, "payments") &&
-        (ORDER_PAYMENT_METHODS as readonly string[]).includes(String(body.paymentMethod))
-          ? String(body.paymentMethod)
-          : "cash";
+      // Add-on: payment method tag. Cash + "online-payment" are the global
+      // defaults; owners can define their own merchant names in Settings.
+      const pmCandidate = String(body.paymentMethod ?? "").trim();
+      const pmMatch = matchPaymentMethod(ownerPref?.paymentMethods, pmCandidate);
+      const paymentMethod = addonEnabled(ownerPref?.addons, "payments") && pmMatch ? pmMatch : "cash";
 
       // Add-on: stock — check & decrement inside the same transaction.
       if (addonEnabled(ownerPref?.addons, "stock")) {

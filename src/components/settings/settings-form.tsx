@@ -33,6 +33,7 @@ export function SettingsForm({
     receiptSize?: string;
     taxRate?: number;
     googleReviewUrl?: string;
+    paymentMethods?: string[];
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -51,6 +52,17 @@ export function SettingsForm({
   const [receiptSize, setReceiptSize] = useState(initial.receiptSize ?? "80");
   const [taxRate, setTaxRate] = useState(String(initial.taxRate ?? 0));
   const [googleReviewUrl, setGoogleReviewUrl] = useState(initial.googleReviewUrl ?? "");
+  const [pmList, setPmList] = useState<string[]>(initial.paymentMethods ?? ["online-payment"]);
+  const [pmInput, setPmInput] = useState("");
+
+  function addPaymentMethod() {
+    const name = pmInput.trim().slice(0, 24);
+    setPmInput("");
+    if (!name || name.toLowerCase() === "cash") return;
+    if (pmList.some((m) => m.toLowerCase() === name.toLowerCase())) return;
+    if (pmList.length >= 8) return;
+    setPmList([...pmList, name]);
+  }
 
   function onReceiptLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -96,6 +108,7 @@ export function SettingsForm({
           receiptFooter,
           receiptLogo,
           receiptSize,
+          ...(addons.payments === true ? { paymentMethods: pmList } : {}),
           ...(addons.tax === true ? { taxRate: Math.max(0, Math.min(30, Math.round(Number(taxRate) || 0))) } : {}),
           ...(addons.googleReview === true ? { googleReviewUrl } : {}),
         }),
@@ -333,6 +346,52 @@ export function SettingsForm({
                   </Field>
                 </div>
               </div>
+            </Card>
+          )}
+
+          {addons.payments === true && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+                <Coins className="h-5 w-5 text-orange-500" /> {t.settings.pmTitle}
+              </h2>
+              <p className="mb-5 text-sm text-slate-500">{t.settings.pmHint}</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white">
+                  {t.settings.pmCashAlways}
+                </span>
+                {pmList.map((m) => (
+                  <span key={m} className="flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-700 ring-1 ring-orange-200">
+                    {m === "online-payment" ? t.settings.pmOnline : m}
+                    <button
+                      type="button"
+                      onClick={() => setPmList(pmList.filter((x) => x !== m))}
+                      className="grid h-4 w-4 place-items-center rounded-full text-orange-400 transition hover:bg-orange-100 hover:text-orange-600"
+                      aria-label={`Remove ${m}`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Input
+                  value={pmInput}
+                  onChange={(e) => setPmInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addPaymentMethod();
+                    }
+                  }}
+                  maxLength={24}
+                  placeholder={t.settings.pmPh}
+                  className="flex-1"
+                />
+                <Button type="button" variant="secondary" onClick={addPaymentMethod} disabled={!pmInput.trim() || pmList.length >= 8}>
+                  {t.settings.pmAdd}
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">{t.settings.pmNote}</p>
             </Card>
           )}
 

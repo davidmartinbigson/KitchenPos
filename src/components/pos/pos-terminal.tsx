@@ -79,6 +79,7 @@ export function PosTerminal({
   addons = {},
   branding,
   taxRate = 0,
+  paymentMethods = [],
 }: {
   initialItems: MenuItemDTO[];
   currency: string;
@@ -89,6 +90,8 @@ export function PosTerminal({
   branding?: { logo: string; header: string; footer: string; size: string };
   /** Tax add-on: VAT/GST percent from Settings (server re-computes the final amount). */
   taxRate?: number;
+  /** Payments add-on: owner's custom method names (cash is always offered). */
+  paymentMethods?: string[];
 }) {
   const addOn = (key: string) => addons[key] === true;
   const { t, lang } = useI18n();
@@ -849,7 +852,7 @@ export function PosTerminal({
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-500">{P.payMethod}</span>
                     <div className="flex flex-1 flex-wrap gap-1.5">
-                      {(["cash", "card", "jazzcash", "easypaisa", "bank"] as const).map((m) => (
+                      {["cash", ...(paymentMethods.length ? paymentMethods : ["online-payment"])].map((m) => (
                         <button
                           type="button"
                           key={m}
@@ -861,7 +864,11 @@ export function PosTerminal({
                               : "bg-white text-slate-600 ring-slate-200 hover:ring-orange-300",
                           )}
                         >
-                          {P.methods[m]}
+                          {m === "cash"
+                            ? P.methods.cash
+                            : m === "online-payment"
+                              ? P.methods.online
+                              : ((P.methods as Record<string, string>)[m] ?? m)}
                         </button>
                       ))}
                     </div>

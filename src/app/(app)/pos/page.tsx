@@ -4,6 +4,7 @@ import { menuItems, users } from "@/db/schema";
 import { requirePosScope } from "@/lib/page-guards";
 import type { MenuItemDTO } from "@/lib/types";
 import { parseAddons } from "@/lib/addons";
+import { normalizePaymentMethods } from "@/lib/payment-methods";
 import { PosTerminal } from "@/components/pos/pos-terminal";
 
 export const metadata = { title: "Point of Sale" };
@@ -15,6 +16,7 @@ export default async function PosPage() {
     .select({
       addons: users.addons,
       taxRate: users.taxRate,
+      paymentMethods: users.paymentMethods,
       receiptHeader: users.receiptHeader,
       receiptFooter: users.receiptFooter,
       receiptLogo: users.receiptLogo,
@@ -50,6 +52,7 @@ export default async function PosPage() {
       readOnly={scope.type === "staff"}
       addons={parseAddons(ownerRow?.addons)}
       taxRate={ownerRow?.taxRate ?? 0}
+      paymentMethods={normalizePaymentMethods(ownerRow?.paymentMethods)}
       branding={{
         logo: ownerRow?.receiptLogo ?? "",
         header: ownerRow?.receiptHeader ?? "",

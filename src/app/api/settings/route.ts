@@ -6,6 +6,7 @@ import { jsonError, requireUser } from "@/lib/api";
 import { isLang } from "@/lib/i18n";
 import { currencyForCountry, isCountryCode } from "@/lib/countries";
 import { mergeAddons } from "@/lib/addons";
+import { normalizePaymentMethods } from "@/lib/payment-methods";
 
 export async function GET() {
   const { user, response } = await requireUser();
@@ -54,6 +55,10 @@ export async function PATCH(request: Request) {
     const url = String(body.googleReviewUrl).trim().slice(0, 300);
     if (url && !/^https:\/\//i.test(url)) return jsonError("INVALID_URL", 400);
     updates.googleReviewUrl = url;
+  }
+  if (body.paymentMethods !== undefined) {
+    if (!Array.isArray(body.paymentMethods)) return jsonError("INVALID_PAYMENT_METHODS", 400);
+    updates.paymentMethods = normalizePaymentMethods(body.paymentMethods);
   }
   if (body.tableCount !== undefined) {
     const n = Math.round(Number(body.tableCount));
