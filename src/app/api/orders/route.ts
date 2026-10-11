@@ -27,7 +27,10 @@ export async function GET(request: Request) {
     with: { items: true },
   });
 
-  return NextResponse.json({ orders: rows });
+  // The proof image (base64) stays out of list responses; fetch it per order at /api/orders/[id]/proof.
+  return NextResponse.json({
+    orders: rows.map(({ paymentProof, ...order }) => ({ ...order, paymentProof: Boolean(paymentProof) })),
+  });
 }
 
 export async function POST(request: Request) {

@@ -146,5 +146,6 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   const displayOrderNo = restaurant.dailyOrderReset ? result.dailyOrderNo : result.orderNumber;
-  return NextResponse.json({ orderNumber: displayOrderNo, total: result.total }, { status: 201 });
+  // id is returned so the guest can attach a payment-proof screenshot to THIS order.
+  return NextResponse.json({ id: result.id, orderNumber: displayOrderNo, total: result.total }, { status: 201 });
 }

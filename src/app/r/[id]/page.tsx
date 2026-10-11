@@ -50,6 +50,7 @@ export default async function QrMenuPage({ params, searchParams }: PageArgs) {
       active={active}
       tablePrefill={tableLabel ? `${QR_MENU_STRINGS.table} ${tableLabel}` : ""}
       guestTracking={parseAddons(restaurant.addons).guestTracking === true}
+      paymentProof={parseAddons(restaurant.addons).paymentProof === true}
       items={items.map((i) => ({
         id: i.id,
         name: i.name,

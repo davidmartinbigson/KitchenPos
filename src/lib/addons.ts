@@ -15,6 +15,7 @@ export const ADDON_KEYS = [
   "guestTracking",
   "receiptBrand",
   "kitchenStats",
+  "paymentProof",
 ] as const;
 
 export type AddonKey = (typeof ADDON_KEYS)[number];
@@ -30,6 +31,7 @@ export const READY_ADDONS: AddonKey[] = [
   "guestTracking",
   "receiptBrand",
   "kitchenStats",
+  "paymentProof",
 ];
 
 export const ORDER_PAYMENT_METHODS = ["cash", "card", "jazzcash", "easypaisa", "bank"] as const;

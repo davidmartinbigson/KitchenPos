@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BellRing, Check, Printer, QrCode, X } from "lucide-react";
+import { BellRing, Check, Printer, QrCode, ReceiptText, X } from "lucide-react";
 import { Badge, Button, Modal, cn } from "@/components/ui";
 import { useI18n } from "@/components/providers/language-provider";
 import { formatDate, formatNumber, formatTime } from "@/lib/format";
@@ -29,6 +29,8 @@ type NotifierOrder = {
   createdAt: string;
   completedAt: string | null;
   voidedAt: string | null;
+  /** True when the guest attached an online-payment screenshot (flag only). */
+  paymentProof?: boolean;
   items: NotifierItem[];
 };
 
@@ -81,6 +83,8 @@ export function OrderNotifier() {
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [printOrder, setPrintOrder] = useState<NotifierOrder | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofLoading, setProofLoading] = useState(false);
   const [bumped, setBumped] = useState(false);
   const prevPendingRef = useRef(0);
 
@@ -170,6 +174,20 @@ export function OrderNotifier() {
   );
 
   const displayNo = (o: NotifierOrder) => (prefs?.dailyOrderReset ? o.dailyOrderNo : o.orderNumber);
+
+  async function viewProof(order: NotifierOrder) {
+    if (proofLoading) return;
+    setProofLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}/proof`, { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && data.proof) setProofUrl(String(data.proof));
+    } catch {
+      /* keep modal closed on failure */
+    } finally {
+      setProofLoading(false);
+    }
+  }
 
   if (!prefs) return null;
 
@@ -273,7 +291,25 @@ export function OrderNotifier() {
                       <Printer className="h-4 w-4" />
                       {N.print}
                     </Button>
+                    {order.paymentProof && (
+                      <Button
+                        variant="secondary"
+                        className="!py-1.5 text-xs !text-emerald-700 ring-emerald-200"
+                        onClick={() => viewProof(order)}
+                        disabled={proofLoading}
+                      >
+                        <ReceiptText className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
+                  {order.paymentProof && (
+                    <button
+                      onClick={() => viewProof(order)}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-200"
+                    >
+                      <ReceiptText className="h-3.5 w-3.5" /> {N.proof}
+                    </button>
+                  )}
                 </motion.div>
               ))}
 
@@ -302,7 +338,12 @@ export function OrderNotifier() {
                     </div>
                     <Badge tone="green">{money(order.total)}</Badge>
                   </div>
-                  <div className="mt-2 flex justify-end">
+                  <div className="mt-2 flex justify-end gap-2">
+                    {order.paymentProof && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-200">
+                        📸 {N.proof}
+                      </span>
+                    )}
                     <Button
                       variant="secondary"
                       className="!py-1 text-xs"
@@ -388,6 +429,22 @@ export function OrderNotifier() {
             ) : null}
             <p className="text-center text-[11px] text-slate-500">{P.thankYou}</p>
           </div>
+        )}
+      </Modal>
+
+      {/* Payment proof viewer */}
+      <Modal
+        open={Boolean(proofUrl)}
+        onClose={() => setProofUrl(null)}
+        title={N.proofView}
+      >
+        {proofUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={proofUrl}
+            alt={N.proofView}
+            className="mx-auto max-h-[70vh] w-auto rounded-2xl ring-1 ring-slate-200"
+          />
         )}
       </Modal>
 

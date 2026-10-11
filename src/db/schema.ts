@@ -163,6 +163,8 @@ export const orders = pgTable(
   voidReason: text("void_reason").notNull().default(""),
   /** Customer WhatsApp add-on: phone in international format for one-tap updates. */
   customerPhone: text("customer_phone").notNull().default(""),
+  /** Payment proof add-on: guest-uploaded online-payment screenshot (small JPEG data URL). */
+  paymentProof: text("payment_proof"),
   /** Set when the kitchen marks all items ready/served — used for hourly heatmap & open-order age. */
   completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { compressImage } from "@/lib/format";
 
 type Item = {
   id: number;
@@ -23,6 +24,7 @@ export function QrMenuClient({
   items,
   tablePrefill = "",
   guestTracking = false,
+  paymentProof = false,
 }: {
   restaurantId: number;
   shopName: string;
@@ -31,13 +33,16 @@ export function QrMenuClient({
   items: Item[];
   tablePrefill?: string;
   guestTracking?: boolean;
+  /** Payment proof add-on: guest can attach an online-payment screenshot on the done screen. */
+  paymentProof?: boolean;
 }) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState(tablePrefill);
   const [cartOpen, setCartOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ orderNumber: number; total: number } | null>(null);
+  const [done, setDone] = useState<{ id: number; orderNumber: number; total: number } | null>(null);
+  const [proofState, setProofState] = useState<"idle" | "uploading" | "sent" | "failed">("idle");
   const [cat, setCat] = useState<string>("all");
 
   const money = (n: number) => `${currency} ${n.toLocaleString()}`;
@@ -91,9 +96,9 @@ export function QrMenuClient({
           items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex })),
         }),
       });
-      const data = (await res.json()) as { orderNumber?: number; total?: number; error?: string };
+      const data = (await res.json()) as { id?: number; orderNumber?: number; total?: number; error?: string };
       if (res.ok && data.orderNumber) {
-        setDone({ orderNumber: data.orderNumber, total: data.total ?? total });
+        setDone({ id: data.id ?? 0, orderNumber: data.orderNumber, total: data.total ?? total });
         setCart({});
         setCartOpen(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -136,6 +141,58 @@ export function QrMenuClient({
           <p className="mt-3 text-sm text-slate-500">
             Your order has been sent to the kitchen. Please show this number at the counter.
           </p>
+          {paymentProof && done.id > 0 && (
+            <div className="mt-4 rounded-2xl border border-dashed border-emerald-300 bg-emerald-50/70 p-4 text-start">
+              {proofState === "sent" ? (
+                <p className="text-sm font-semibold text-emerald-700">
+                  ✅ Payment screenshot received! The counter will confirm your payment.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-slate-800">Paid online? Send your screenshot 📸</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    Upload the bank / wallet payment screenshot so the counter can confirm your payment
+                    with this order.
+                  </p>
+                  <label
+                    className={`mt-3 block cursor-pointer rounded-xl bg-emerald-600 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 ${
+                      proofState === "uploading" ? "pointer-events-none opacity-60" : ""
+                    }`}
+                  >
+                    {proofState === "uploading" ? "Uploading..." : "Upload payment screenshot"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setProofState("uploading");
+                        compressImage(file, 640, 0.8)
+                          .then((image) =>
+                            fetch(`/api/public/order/${restaurantId}/proof`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ orderId: done.id, image }),
+                            }).then(async (res) => {
+                              if (!res.ok) throw new Error();
+                              setProofState("sent");
+                            }),
+                          )
+                          .catch(() => setProofState("failed"));
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {proofState === "failed" && (
+                    <p className="mt-2 text-xs font-semibold text-rose-600">
+                      Upload failed. Please try again with a smaller image.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {guestTracking && (
             <a
               href={`/r/${restaurantId}/o/${done.orderNumber}`}
