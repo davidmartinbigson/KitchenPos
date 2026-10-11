@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, ChefHat, Globe2, Lock, Mail, Store, UserRound, CheckCircle2, UsersRound } from "lucide-react";
+import { ArrowRight, ChefHat, Eye, EyeOff, Globe2, Lock, Mail, Store, UserRound, CheckCircle2, UsersRound } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -25,6 +25,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", shopName: "", city: "", area: "" });
   const [country, setCountry] = useState("PK");
+  const [showPassword, setShowPassword] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [welcome, setWelcome] = useState<{ name: string; supportEmail: string; emailed: boolean } | null>(null);
 
@@ -290,14 +291,23 @@ export function AuthForm({ mode }: { mode: Mode }) {
                     <Lock className="pointer-events-none absolute start-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <Input
                       required
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       minLength={6}
                       value={form.password}
                       onChange={update("password")}
-                      className="ps-12"
+                      className="ps-12 pe-12"
                       autoComplete={isSignup ? "new-password" : "current-password"}
                       placeholder="••••••••"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? A.hidePassword : A.showPassword}
+                      tabIndex={-1}
+                      className="absolute end-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
                 </Field>
 
