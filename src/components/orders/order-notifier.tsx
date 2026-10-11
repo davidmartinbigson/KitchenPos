@@ -87,6 +87,11 @@ export function OrderNotifier() {
   const [proofLoading, setProofLoading] = useState(false);
   const [bumped, setBumped] = useState(false);
   const prevPendingRef = useRef(0);
+  /** Flash card: the newest arrival pops above the bell for 10 seconds. */
+  const [flash, setFlash] = useState<NotifierOrder | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const knownOrderIdsRef = useRef<Set<number>>(new Set());
+  const primedRef = useRef(false);
 
   const loadPrefs = useCallback(async () => {
     try {
@@ -141,16 +146,38 @@ export function OrderNotifier() {
     (o) => o.completedAt && sameLocalDay(new Date(o.completedAt), now),
   );
 
-  // Pop animation + opens the panel automatically when a brand-new order lands.
+  // Pop animation on the bell + flash card with the newest order for 10 seconds.
   useEffect(() => {
-    if (pending.length > prevPendingRef.current) {
+    const fresh = pending.filter((o) => !knownOrderIdsRef.current.has(o.id));
+    pending.forEach((o) => knownOrderIdsRef.current.add(o.id));
+
+    if (!primedRef.current) {
+      // First load: mark existing orders as known — don't flash history.
+      primedRef.current = true;
+      prevPendingRef.current = pending.length;
+      return;
+    }
+
+    if (fresh.length > 0) {
+      // orders arrive newest-first from the API
+      setFlash(fresh[0]);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = setTimeout(() => setFlash(null), 10_000);
       setBumped(true);
       const t1 = setTimeout(() => setBumped(false), 1200);
       prevPendingRef.current = pending.length;
       return () => clearTimeout(t1);
     }
     prevPendingRef.current = pending.length;
-  }, [pending.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
+
+  useEffect(
+    () => () => {
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    },
+    [],
+  );
 
   async function completeOrder(order: NotifierOrder) {
     const itemIds = order.items.filter((i) => i.status !== "ready").map((i) => i.id);
@@ -208,6 +235,54 @@ export function OrderNotifier() {
           </span>
         )}
       </motion.button>
+
+      {/* 10-second flash card for the newest arrival */}
+      <AnimatePresence>
+        {flash && !open && (
+          <motion.button
+            key={flash.id}
+            initial={{ opacity: 0, y: 18, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 320, damping: 24 }}
+            onClick={() => {
+              setOpen(true);
+              setFlash(null);
+            }}
+            className="fixed bottom-[9.5rem] end-4 z-40 w-[calc(100vw-2rem)] max-w-xs rounded-2xl border-2 border-orange-300 bg-white p-3.5 text-start shadow-2xl shadow-orange-500/25 lg:bottom-24 lg:end-6"
+          >
+            <div className="flex items-center gap-2.5">
+              <motion.span
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-white"
+              >
+                <BellRing className="h-5 w-5" />
+              </motion.span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black uppercase tracking-wide text-orange-600">{N.newOrder}</p>
+                <p className="truncate text-sm font-black text-slate-900">
+                  #{formatNumber(displayNo(flash), lang)} · {flash.customerName || N.guest}
+                </p>
+                <p className="text-xs font-semibold text-slate-500">
+                  {money(flash.total)} · {formatNumber(flash.items.reduce((s, l) => s + l.quantity, 0), lang)}{" "}
+                  {t.sales.items.toLowerCase()} — {N.tapToView}
+                </p>
+              </div>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFlash(null);
+                }}
+                className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label={t.close}
+              >
+                <X className="h-3.5 w-3.5" />
+              </span>
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Stacked alert cards */}
       <AnimatePresence>
