@@ -45,6 +45,16 @@ export async function PATCH(request: Request) {
   if (body.dailyOrderReset !== undefined) {
     updates.dailyOrderReset = Boolean(body.dailyOrderReset);
   }
+  if (body.taxRate !== undefined) {
+    const rate = Math.round(Number(body.taxRate));
+    if (!Number.isFinite(rate) || rate < 0 || rate > 30) return jsonError("INVALID_TAX", 400);
+    updates.taxRate = rate;
+  }
+  if (body.googleReviewUrl !== undefined) {
+    const url = String(body.googleReviewUrl).trim().slice(0, 300);
+    if (url && !/^https:\/\//i.test(url)) return jsonError("INVALID_URL", 400);
+    updates.googleReviewUrl = url;
+  }
   if (body.tableCount !== undefined) {
     const n = Math.round(Number(body.tableCount));
     if (Number.isFinite(n)) updates.tableCount = Math.min(60, Math.max(2, n));

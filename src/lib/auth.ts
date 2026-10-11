@@ -105,6 +105,8 @@ export async function getCurrentUser() {
       receiptFooter: users.receiptFooter,
       receiptLogo: users.receiptLogo,
       receiptSize: users.receiptSize,
+      taxRate: users.taxRate,
+      googleReviewUrl: users.googleReviewUrl,
       lastSeenAt: users.lastSeenAt,
     })
     .from(users)

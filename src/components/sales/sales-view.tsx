@@ -26,8 +26,14 @@ type OrderRow = {
   voidedAt?: string | null;
   voidReason?: string;
   completedAt?: string | null;
-  items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number; costPrice?: number }[];
+  customerPhone?: string;
+  orderType?: string;
+  rating?: number | null;
+  feedback?: string | null;
+  items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number; costPrice?: number; note?: string }[];
 };
+
+type CrmCustomer = { phone: string; name: string; visits: number; spent: number; lastAt: string };
 
 const PERIOD_DAYS = 30;
 
@@ -254,6 +260,35 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [exportRange, setExportRange] = useState<"month" | "day" | "all">("month");
+  const [crmOrders, setCrmOrders] = useState<OrderRow[] | null>(null);
+
+  // CRM-lite add-on: one extra fetch, aggregated by saved customer phone.
+  useEffect(() => {
+    if (addons.crm !== true) return;
+    fetch(`/api/orders?limit=1000`)
+      .then((r) => r.json())
+      .then((data: { orders: OrderRow[] }) => setCrmOrders(data.orders ?? []))
+      .catch(() => setCrmOrders([]));
+  }, [addons.crm]);
+
+  const topCustomers = useMemo<CrmCustomer[]>(() => {
+    if (!crmOrders) return [];
+    const byPhone = new Map<string, CrmCustomer>();
+    for (const o of crmOrders) {
+      if (o.voidedAt) continue;
+      const phone = (o.customerPhone ?? "").replace(/[^\d+]/g, "");
+      if (phone.length < 8) continue;
+      const cur = byPhone.get(phone) ?? { phone, name: o.customerName || phone, visits: 0, spent: 0, lastAt: o.createdAt };
+      cur.visits += 1;
+      cur.spent += o.total;
+      if (o.createdAt > cur.lastAt) {
+        cur.lastAt = o.createdAt;
+        if (o.customerName) cur.name = o.customerName;
+      }
+      byPhone.set(phone, cur);
+    }
+    return [...byPhone.values()].sort((a, b) => b.spent - a.spent).slice(0, 6);
+  }, [crmOrders]);
   const [expenses, setExpenses] = useState<ExpenseRow[] | null>(null);
   const [expForm, setExpForm] = useState({ title: "", amount: "" });
   const [expSaving, setExpSaving] = useState(false);
@@ -651,6 +686,52 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
           )}
         </Card>
 
+        {/* CRM-lite: best repeat customers by saved phone */}
+        {addons.crm === true && (
+          <Card className="p-6">
+            <div className="mb-4">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <Trophy className="h-5 w-5 text-amber-500" /> {S.crmTitle}
+              </h2>
+              <p className="text-sm text-slate-500">{S.crmDesc}</p>
+            </div>
+            {!crmOrders ? (
+              <div className="space-y-2.5">
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : topCustomers.length === 0 ? (
+              <p className="rounded-xl bg-slate-50 p-4 text-center text-xs font-semibold text-slate-500">{S.crmEmpty}</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {topCustomers.map((c, i) => (
+                  <li key={c.phone} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-xs font-black text-white">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-slate-900">{c.name}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {formatNumber(c.visits, lang)} {S.crmVisits} · {money(c.spent)} {S.crmSpent}
+                      </p>
+                    </div>
+                    <a
+                      href={`https://wa.me/${c.phone.replace(/^\+/, "")}?text=${encodeURIComponent(S.crmWaMsg)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600"
+                      aria-label="WhatsApp"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
+
         {/* Orders of selected day */}
         <Card className="p-6 xl:col-span-3">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -703,6 +784,19 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
                             {formatTime(order.createdAt, lang)} · {formatNumber(order.itemCount, lang)} {S.items.toLowerCase()}
                             {order.takenBy && <span> · {t.kitchen.by} {order.takenBy}</span>}
                           </p>
+                          <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                            {addons.orderTypes === true && order.orderType && order.orderType !== "dine-in" && (
+                              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700">
+                                {order.orderType === "takeaway" ? S.takeaway : S.delivery}
+                              </span>
+                            )}
+                            {addons.feedback === true && (order.rating ?? 0) > 0 && (
+                              <span className="text-xs font-bold text-amber-500" title={order.feedback ?? ""}>
+                                {"★".repeat(order.rating ?? 0)}
+                                <span className="text-slate-300">{"★".repeat(5 - (order.rating ?? 0))}</span>
+                              </span>
+                            )}
+                          </span>
                         </div>
                         <div className="text-end">
                           <p className={cn("font-black", order.voidedAt ? "text-rose-400 line-through" : "text-slate-900")}>
@@ -743,10 +837,16 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
                                 <div key={line.id} className="flex items-center justify-between text-sm">
                                   <span className="text-slate-700">
                                     <span className="font-bold">{line.quantity}×</span> {line.name}
+                                    {line.note ? <span className="block text-[11px] font-semibold text-amber-700">↳ {line.note}</span> : null}
                                   </span>
                                   <span className="font-semibold text-slate-900">{money(line.lineTotal)}</span>
                                 </div>
                               ))}
+                              {addons.feedback === true && order.feedback && (
+                                <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs italic text-amber-800 ring-1 ring-amber-100">
+                                  “{order.feedback}”
+                                </p>
+                              )}
                               <div className="mt-2 grid grid-cols-3 gap-2 border-t border-dashed border-slate-300 pt-3 text-center text-xs">
                                 <div>
                                   <p className="text-slate-500">{S.total}</p>

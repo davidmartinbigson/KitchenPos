@@ -35,6 +35,7 @@ export default async function QrMenuPage({ params, searchParams }: PageArgs) {
   const tableLabel = tableRaw && Number.isInteger(tableN) && tableN >= 1 && tableN <= 200 ? tableN : null;
 
   const active = accessState(restaurant) === "active";
+  const addons = parseAddons(restaurant.addons);
   const items = active
     ? await db.query.menuItems.findMany({
         where: and(eq(menuItems.userId, userId), eq(menuItems.available, true)),
@@ -49,8 +50,9 @@ export default async function QrMenuPage({ params, searchParams }: PageArgs) {
       currency={restaurant.currency}
       active={active}
       tablePrefill={tableLabel ? `${QR_MENU_STRINGS.table} ${tableLabel}` : ""}
-      guestTracking={parseAddons(restaurant.addons).guestTracking === true}
-      paymentProof={parseAddons(restaurant.addons).paymentProof === true}
+      guestTracking={addons.guestTracking === true}
+      paymentProof={addons.paymentProof === true}
+      taxRate={addons.tax === true ? (restaurant.taxRate ?? 0) : 0}
       items={items.map((i) => ({
         id: i.id,
         name: i.name,

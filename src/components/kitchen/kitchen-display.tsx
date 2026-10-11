@@ -26,6 +26,7 @@ type KitchenItem = {
   quantity: number;
   category: string;
   status: "new" | "preparing" | "ready";
+  note?: string;
 };
 
 type KitchenOrder = {
@@ -34,6 +35,7 @@ type KitchenOrder = {
   customerName: string;
   takenBy: string;
   createdAt: string;
+  orderType?: string;
   items: KitchenItem[];
 };
 
@@ -286,6 +288,11 @@ export function KitchenDisplay({
                             <span className="truncate text-base font-black text-white">
                               {order.customerName || K.customer}
                             </span>
+                            {order.orderType && order.orderType !== "dine-in" && (
+                              <span className="shrink-0 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-fuchsia-200 ring-1 ring-fuchsia-400/30">
+                                {order.orderType}
+                              </span>
+                            )}
                           </div>
                           <span className={cn("flex shrink-0 items-center gap-1 text-xs font-bold", late ? "text-rose-300" : "text-slate-400")}>
                             <AlarmClock className="h-3.5 w-3.5" />
@@ -326,6 +333,9 @@ export function KitchenDisplay({
                                 </span>
                                 <span className="min-w-0 flex-1">
                                   <span className="block truncate font-bold">{item.name}</span>
+                                  {item.note ? (
+                                    <span className="block truncate text-xs font-bold italic text-orange-300">↳ {item.note}</span>
+                                  ) : null}
                                   <span className="block truncate text-xs text-slate-400">{item.category}</span>
                                 </span>
                                 {item.status === "new" && <span className="text-xs font-black text-sky-300">{K.start}</span>}

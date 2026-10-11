@@ -3,6 +3,81 @@
 import { useMemo, useState } from "react";
 import { compressImage } from "@/lib/format";
 
+/* Guest menu is standalone (no app i18n): static EN + AR strings, toggled in-page.
+   Item names always stay as the restaurant typed them. */
+const STR = {
+  en: {
+    unavailable: "This menu is not available right now. Please ask the staff for assistance.",
+    received: "Order received!",
+    orderNo: "Order #",
+    sentKitchen: "Your order has been sent to the kitchen. Please show this number at the counter.",
+    paidOnline: "Paid online? Send your screenshot 📸",
+    paidHint: "Upload the bank / wallet payment screenshot so the counter can confirm your payment with this order.",
+    uploading: "Uploading...",
+    uploadBtn: "Upload payment screenshot",
+    proofSent: "✅ Payment screenshot received! The counter will confirm your payment.",
+    proofFail: "Upload failed. Please try again with a smaller image.",
+    trackLive: "🔥 Track your order live",
+    orderMore: "Order more",
+    tagline: "Scan • Order • Enjoy",
+    all: "All",
+    noItems: "No items available right now.",
+    soldOut: "Sold out",
+    items: "items",
+    review: "Review order →",
+    yourOrder: "Your order",
+    each: "each",
+    nameLabel: "Your name or table (optional)",
+    namePh: "e.g. Ahmed / Table 5",
+    notePh: "✎ Note (e.g. less spicy)",
+    subtotal: "Subtotal",
+    tax: "Tax",
+    total: "Total",
+    placeOrder: "Place order",
+    placing: "Placing order…",
+    back: "← Back to menu",
+    errStock: "Sorry — one of the items just sold out. Please adjust your order.",
+    errGeneric: "Order could not be placed. Please try again.",
+    errNetwork: "Network problem. Please check your connection and try again.",
+  },
+  ar: {
+    unavailable: "هذه القائمة غير متاحة حالياً. يرجى طلب المساعدة من الموظفين.",
+    received: "تم استلام الطلب!",
+    orderNo: "طلب رقم #",
+    sentKitchen: "تم إرسال طلبك إلى المطبخ. يرجى إظهار هذا الرقم عند الكاونتر.",
+    paidOnline: "دفعت عبر الإنترنت؟ أرسل لقطة الشاشة 📸",
+    paidHint: "ارفع لقطة شاشة الدفع البنكي / المحفظة حتى يؤكد الكاونتر دفعك مع هذا الطلب.",
+    uploading: "جارٍ الرفع...",
+    uploadBtn: "رفع لقطة الدفع",
+    proofSent: "✅ تم استلام لقطة الدفع! سيؤكد الكاونتر دفعك.",
+    proofFail: "فشل الرفع. حاول مرة أخرى بصورة أصغر.",
+    trackLive: "🔥 تتبّع طلبك مباشرة",
+    orderMore: "اطلب المزيد",
+    tagline: "امسح • اطلب • استمتع",
+    all: "الكل",
+    noItems: "لا توجد أصناف متاحة حالياً.",
+    soldOut: "نفد من المخزون",
+    items: "أصناف",
+    review: "مراجعة الطلب ←",
+    yourOrder: "طلبك",
+    each: "للقطعة",
+    nameLabel: "اسمك أو رقم الطاولة (اختياري)",
+    namePh: "مثال: أحمد / طاولة 5",
+    notePh: "✎ ملاحظة (مثال: حار قليل)",
+    subtotal: "المجموع الفرعي",
+    tax: "الضريبة",
+    total: "الإجمالي",
+    placeOrder: "إرسال الطلب",
+    placing: "جارٍ إرسال الطلب…",
+    back: "→ العودة إلى القائمة",
+    errStock: "عذراً — أحد الأصناف نفد للتو. عدّل طلبك من فضلك.",
+    errGeneric: "تعذّر إرسال الطلب. حاول مرة أخرى.",
+    errNetwork: "مشكلة في الشبكة. تحقق من اتصالك وحاول مرة أخرى.",
+  },
+} as const;
+
+type Lang = keyof typeof STR;
+
 type Item = {
   id: number;
   name: string;
@@ -25,6 +100,7 @@ export function QrMenuClient({
   tablePrefill = "",
   guestTracking = false,
   paymentProof = false,
+  taxRate = 0,
 }: {
   restaurantId: number;
   shopName: string;
@@ -35,8 +111,11 @@ export function QrMenuClient({
   guestTracking?: boolean;
   /** Payment proof add-on: guest can attach an online-payment screenshot on the done screen. */
   paymentProof?: boolean;
+  /** Tax add-on: VAT % configured by the shop (0 = off). Server re-computes the final amount. */
+  taxRate?: number;
 }) {
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [customerName, setCustomerName] = useState(tablePrefill);
   const [cartOpen, setCartOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -44,6 +123,22 @@ export function QrMenuClient({
   const [done, setDone] = useState<{ id: number; orderNumber: number; total: number } | null>(null);
   const [proofState, setProofState] = useState<"idle" | "uploading" | "sent" | "failed">("idle");
   const [cat, setCat] = useState<string>("all");
+  const [lang, setLang] = useState<Lang>(() => {
+    if (typeof window === "undefined") return "en";
+    return window.localStorage.getItem("qrmenu-lang") === "ar" ? "ar" : "en";
+  });
+
+  const t = STR[lang];
+  const isAr = lang === "ar";
+
+  function switchLang(next: Lang) {
+    setLang(next);
+    try {
+      window.localStorage.setItem("qrmenu-lang", next);
+    } catch {
+      /* private mode */
+    }
+  }
 
   const money = (n: number) => `${currency} ${n.toLocaleString()}`;
 
@@ -71,7 +166,10 @@ export function QrMenuClient({
       };
     })
     .filter((l): l is CartLine => l !== null);
-  const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+  const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+  const taxRateClient = taxRate >= 1 ? Math.min(30, Math.round(taxRate)) : 0;
+  const taxAmount = Math.round((subtotal * taxRateClient) / 100);
+  const total = subtotal + taxAmount;
   const count = lines.reduce((s, l) => s + l.qty, 0);
 
   function bump(key: string, delta: number) {
@@ -93,22 +191,26 @@ export function QrMenuClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName,
-          items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex })),
+          items: lines.map((l) => {
+            const key = l.extraIndex === undefined ? String(l.item.id) : `${l.item.id}x${l.extraIndex}`;
+            return { menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex, note: notes[key]?.trim() || undefined };
+          }),
         }),
       });
       const data = (await res.json()) as { id?: number; orderNumber?: number; total?: number; error?: string };
       if (res.ok && data.orderNumber) {
         setDone({ id: data.id ?? 0, orderNumber: data.orderNumber, total: data.total ?? total });
         setCart({});
+        setNotes({});
         setCartOpen(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else if (data.error === "STOCK_SHORT") {
-        setError("Sorry — one of the items just sold out. Please adjust your order.");
+        setError(t.errStock);
       } else {
-        setError("Order could not be placed. Please try again.");
+        setError(t.errGeneric);
       }
     } catch {
-      setError("Network problem. Please check your connection and try again.");
+      setError(t.errNetwork);
     } finally {
       setPlacing(false);
     }
@@ -116,13 +218,11 @@ export function QrMenuClient({
 
   if (!active) {
     return (
-      <main className="flex min-h-svh items-center justify-center bg-gradient-to-b from-amber-50 to-orange-50 px-4">
+      <main dir={isAr ? "rtl" : "ltr"} lang={lang} className="flex min-h-svh items-center justify-center bg-gradient-to-b from-amber-50 to-orange-50 px-4">
         <div className="w-full max-w-sm rounded-3xl border border-orange-200 bg-white p-8 text-center shadow-lg">
           <div className="text-4xl">🍽️</div>
           <h1 className="mt-3 text-xl font-bold text-slate-900">{shopName}</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            This menu is not available right now. Please ask the staff for assistance.
-          </p>
+          <p className="mt-2 text-sm text-slate-500">{t.unavailable}</p>
         </div>
       </main>
     );
@@ -130,36 +230,30 @@ export function QrMenuClient({
 
   if (done) {
     return (
-      <main className="flex min-h-svh items-center justify-center bg-gradient-to-b from-emerald-50 to-teal-50 px-4">
+      <main dir={isAr ? "rtl" : "ltr"} lang={lang} className="flex min-h-svh items-center justify-center bg-gradient-to-b from-emerald-50 to-teal-50 px-4">
         <div className="w-full max-w-sm rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-lg">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">✅</div>
-          <p className="mt-4 text-sm font-medium text-emerald-700">Order received!</p>
+          <p className="mt-4 text-sm font-medium text-emerald-700">{t.received}</p>
           <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
-            Order #{done.orderNumber}
+            {t.orderNo}
+            {done.orderNumber}
           </h1>
           <p className="mt-2 text-lg font-semibold text-slate-700">{money(done.total)}</p>
-          <p className="mt-3 text-sm text-slate-500">
-            Your order has been sent to the kitchen. Please show this number at the counter.
-          </p>
+          <p className="mt-3 text-sm text-slate-500">{t.sentKitchen}</p>
           {paymentProof && done.id > 0 && (
             <div className="mt-4 rounded-2xl border border-dashed border-emerald-300 bg-emerald-50/70 p-4 text-start">
               {proofState === "sent" ? (
-                <p className="text-sm font-semibold text-emerald-700">
-                  ✅ Payment screenshot received! The counter will confirm your payment.
-                </p>
+                <p className="text-sm font-semibold text-emerald-700">{t.proofSent}</p>
               ) : (
                 <>
-                  <p className="text-sm font-bold text-slate-800">Paid online? Send your screenshot 📸</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                    Upload the bank / wallet payment screenshot so the counter can confirm your payment
-                    with this order.
-                  </p>
+                  <p className="text-sm font-bold text-slate-800">{t.paidOnline}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">{t.paidHint}</p>
                   <label
                     className={`mt-3 block cursor-pointer rounded-xl bg-emerald-600 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 ${
                       proofState === "uploading" ? "pointer-events-none opacity-60" : ""
                     }`}
                   >
-                    {proofState === "uploading" ? "Uploading..." : "Upload payment screenshot"}
+                    {proofState === "uploading" ? t.uploading : t.uploadBtn}
                     <input
                       type="file"
                       accept="image/*"
@@ -185,9 +279,7 @@ export function QrMenuClient({
                     />
                   </label>
                   {proofState === "failed" && (
-                    <p className="mt-2 text-xs font-semibold text-rose-600">
-                      Upload failed. Please try again with a smaller image.
-                    </p>
+                    <p className="mt-2 text-xs font-semibold text-rose-600">{t.proofFail}</p>
                   )}
                 </>
               )}
@@ -198,7 +290,7 @@ export function QrMenuClient({
               href={`/r/${restaurantId}/o/${done.orderNumber}`}
               className="mt-6 block w-full rounded-xl bg-orange-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700"
             >
-              🔥 Track your order live
+              {t.trackLive}
             </a>
           )}
           <button
@@ -209,7 +301,7 @@ export function QrMenuClient({
                 : "mt-6 bg-emerald-600 text-white hover:bg-emerald-700"
             }`}
           >
-            Order more
+            {t.orderMore}
           </button>
         </div>
       </main>
@@ -217,21 +309,29 @@ export function QrMenuClient({
   }
 
   return (
-    <main className="min-h-svh bg-gradient-to-b from-amber-50 to-orange-50 pb-28">
+    <main dir={isAr ? "rtl" : "ltr"} lang={lang} className="min-h-svh bg-gradient-to-b from-amber-50 to-orange-50 pb-28">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-orange-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-xl shadow-sm">
             🍽️
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="truncate text-base font-bold text-slate-900">{shopName}</h1>
             <p className="text-xs text-slate-500">
-              Scan • Order • Enjoy{tablePrefill ? ` · ${tablePrefill}` : ""}
+              {t.tagline}
+              {tablePrefill ? ` · ${tablePrefill}` : ""}
             </p>
           </div>
+          <button
+            onClick={() => switchLang(isAr ? "en" : "ar")}
+            className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-50"
+            aria-label="Switch language"
+          >
+            {isAr ? "EN" : "عربي"}
+          </button>
           {tablePrefill && (
-            <span className="ms-auto shrink-0 rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+            <span className="shrink-0 rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
               {tablePrefill}
             </span>
           )}
@@ -244,7 +344,7 @@ export function QrMenuClient({
                 cat === "all" ? "bg-orange-600 text-white shadow-sm" : "bg-white text-slate-600 ring-1 ring-orange-200"
               }`}
             >
-              All
+              {t.all}
             </button>
             {cats.map((c) => (
               <button
@@ -264,7 +364,7 @@ export function QrMenuClient({
       {/* Items */}
       <div className="mx-auto max-w-2xl px-4 py-4">
         {list.length === 0 ? (
-          <p className="py-16 text-center text-sm text-slate-500">No items available right now.</p>
+          <p className="py-16 text-center text-sm text-slate-500">{t.noItems}</p>
         ) : (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {list.map((item) => {
@@ -311,7 +411,7 @@ export function QrMenuClient({
                   </div>
                   {soldOut ? (
                     <span className="shrink-0 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white">
-                      Sold out
+                      {t.soldOut}
                     </span>
                   ) : qty === 0 ? (
                     <button
@@ -353,10 +453,10 @@ export function QrMenuClient({
             className="mx-auto flex w-full max-w-2xl items-center justify-between rounded-2xl bg-slate-900 px-5 py-4 text-white shadow-xl"
           >
             <span className="flex items-center gap-2 text-sm font-semibold">
-              🛒 {count} item{count !== 1 ? "s" : ""}
+              🛒 {count} {t.items}
             </span>
             <span className="text-sm font-semibold">
-              {money(total)} · <span className="text-orange-300">Review order →</span>
+              {money(total)} · <span className="text-orange-300">{t.review}</span>
             </span>
           </button>
         </div>
@@ -370,52 +470,79 @@ export function QrMenuClient({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200" />
-            <h2 className="text-lg font-bold text-slate-900">Your order</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t.yourOrder}</h2>
             <ul className="mt-3 space-y-2">
               {lines.map((l) => {
                 const lineKey = l.extraIndex === undefined ? String(l.item.id) : `${l.item.id}x${l.extraIndex}`;
                 return (
-                  <li key={lineKey} className="flex items-center gap-3 rounded-xl bg-orange-50 px-3 py-2.5">
-                    <span className="text-xl">{l.item.emoji || "🍴"}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">{l.displayName}</p>
-                      <p className="text-xs text-slate-500">{money(l.unitPrice)} each</p>
+                  <li key={lineKey} className="rounded-xl bg-orange-50 px-3 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{l.item.emoji || "🍴"}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{l.displayName}</p>
+                        <p className="text-xs text-slate-500">
+                          {money(l.unitPrice)} {t.each}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => bump(lineKey, -1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-bold text-orange-700 ring-1 ring-orange-200"
+                        >
+                          −
+                        </button>
+                        <span className="w-5 text-center text-sm font-bold">{l.qty}</span>
+                        <button
+                          onClick={() => bump(lineKey, 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-sm font-bold text-white"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <p className="w-20 text-end text-sm font-bold text-slate-900">{money(l.unitPrice * l.qty)}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => bump(lineKey, -1)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-bold text-orange-700 ring-1 ring-orange-200"
-                      >
-                        −
-                      </button>
-                      <span className="w-5 text-center text-sm font-bold">{l.qty}</span>
-                      <button
-                        onClick={() => bump(lineKey, 1)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-sm font-bold text-white"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <p className="w-20 text-right text-sm font-bold text-slate-900">{money(l.unitPrice * l.qty)}</p>
+                    <input
+                      value={notes[lineKey] ?? ""}
+                      onChange={(e) => setNotes((n) => ({ ...n, [lineKey]: e.target.value }))}
+                      maxLength={140}
+                      placeholder={t.notePh}
+                      className="mt-1.5 w-full rounded-lg border-0 bg-white px-2 py-1.5 text-[11px] text-slate-600 shadow-sm outline-none ring-1 ring-transparent placeholder:text-slate-400 focus:ring-orange-300"
+                    />
                   </li>
                 );
               })}
             </ul>
 
             <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Your name or table (optional)
+              {t.nameLabel}
             </label>
             <input
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="e.g. Ahmed / Table 5"
+              placeholder={t.namePh}
               maxLength={100}
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
             />
 
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-              <span className="text-sm font-semibold text-slate-600">Total</span>
-              <span className="text-xl font-extrabold text-slate-900">{money(total)}</span>
+            <div className="mt-4 space-y-1 border-t border-slate-100 pt-4">
+              {taxAmount > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">{t.subtotal}</span>
+                    <span className="font-semibold text-slate-700">{money(subtotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">
+                      {t.tax} ({taxRateClient}%)
+                    </span>
+                    <span className="font-semibold text-slate-700">+{money(taxAmount)}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-600">{t.total}</span>
+                <span className="text-xl font-extrabold text-slate-900">{money(total)}</span>
+              </div>
             </div>
             {error && <p className="mt-2 text-center text-xs font-medium text-red-600">{error}</p>}
             <button
@@ -423,10 +550,10 @@ export function QrMenuClient({
               disabled={placing || count === 0}
               className="mt-3 w-full rounded-xl bg-orange-600 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 disabled:opacity-50"
             >
-              {placing ? "Placing order…" : "Place order"}
+              {placing ? t.placing : t.placeOrder}
             </button>
             <button onClick={() => setCartOpen(false)} className="mt-2 w-full py-2 text-center text-xs font-semibold text-slate-500">
-              ← Back to menu
+              {t.back}
             </button>
           </div>
         </div>

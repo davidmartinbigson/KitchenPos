@@ -6,13 +6,14 @@
  * as connectivity returns. Nothing the cashier rings up is ever lost.
  */
 
-export type QueuedOrderItem = { menuItemId: number; quantity: number; extraIndex?: number };
+export type QueuedOrderItem = { menuItemId: number; quantity: number; extraIndex?: number; note?: string };
 
 export type QueuedOrder = {
   /** Client-generated id so we can track/replace queue entries safely. */
   localId: string;
   queuedAt: number;
   customerName: string;
+  orderType?: string;
   amountReceived: number;
   items: QueuedOrderItem[];
   discount?: { type: string; value: number };

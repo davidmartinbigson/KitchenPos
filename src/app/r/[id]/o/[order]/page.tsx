@@ -27,7 +27,15 @@ export default async function TrackOrderPage({ params }: PageArgs) {
   const restaurant = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!restaurant) notFound();
   if (accessState(restaurant) !== "active") notFound();
-  if (parseAddons(restaurant.addons).guestTracking !== true) notFound();
+  const addons = parseAddons(restaurant.addons);
+  if (addons.guestTracking !== true) notFound();
 
-  return <TrackClient restaurantId={userId} orderNumber={orderNumber} />;
+  return (
+    <TrackClient
+      restaurantId={userId}
+      orderNumber={orderNumber}
+      feedbackEnabled={addons.feedback === true}
+      googleReviewUrl={addons.googleReview === true ? (restaurant.googleReviewUrl ?? "") : ""}
+    />
+  );
 }

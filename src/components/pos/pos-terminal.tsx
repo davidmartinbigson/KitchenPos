@@ -44,10 +44,13 @@ type ReceiptData = {
   shopName: string;
   sellerName: string;
   currency: string;
-  lines: { name: string; qty: number; unitPrice: number; lineTotal: number; category: string }[];
+  lines: { name: string; qty: number; unitPrice: number; lineTotal: number; category: string; note?: string }[];
   total: number;
   received: number;
   change: number;
+  taxRate?: number;
+  taxAmount?: number;
+  orderType?: string;
   /** True when the order was saved on-device while offline. */
   pendingSync?: boolean;
 };
@@ -75,6 +78,7 @@ export function PosTerminal({
   readOnly = false,
   addons = {},
   branding,
+  taxRate = 0,
 }: {
   initialItems: MenuItemDTO[];
   currency: string;
@@ -83,6 +87,8 @@ export function PosTerminal({
   readOnly?: boolean;
   addons?: Record<string, boolean>;
   branding?: { logo: string; header: string; footer: string; size: string };
+  /** Tax add-on: VAT/GST percent from Settings (server re-computes the final amount). */
+  taxRate?: number;
 }) {
   const addOn = (key: string) => addons[key] === true;
   const { t, lang } = useI18n();
@@ -134,6 +140,7 @@ export function PosTerminal({
             customerName: entry.customerName,
             amountReceived: entry.amountReceived,
             items: entry.items,
+            orderType: entry.orderType,
             discount: entry.discount,
             paymentMethod: entry.paymentMethod,
             customerPhone: entry.customerPhone,
@@ -248,6 +255,9 @@ export function PosTerminal({
   const [discValue, setDiscValue] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
   const [customerPhone, setCustomerPhone] = useState("");
+  /** Per-line special instructions ("less spicy") keyed like the cart. */
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [orderType, setOrderType] = useState("dine-in");
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
   const discountAmount = !addOn("discounts")
@@ -255,7 +265,9 @@ export function PosTerminal({
     : discType === "percent"
       ? Math.min(subtotal, Math.max(0, Math.round((subtotal * (Number(discValue) || 0)) / 100)))
       : Math.min(subtotal, Math.max(0, Math.round(Number(discValue) || 0)));
-  const total = subtotal - discountAmount;
+  const taxRateClient = addOn("tax") && taxRate >= 1 ? Math.min(30, Math.round(taxRate)) : 0;
+  const taxAmount = Math.round(((subtotal - discountAmount) * taxRateClient) / 100);
+  const total = subtotal - discountAmount + taxAmount;
   const itemCount = lines.reduce((sum, l) => sum + l.qty, 0);
   const receivedNum = received.trim() === "" ? total : Math.round(Number(received));
   const validReceived = Number.isFinite(receivedNum);
@@ -291,6 +303,8 @@ export function PosTerminal({
     setCustomer("");
     setCustomerPhone("");
     setReceived("");
+    setNotes({});
+    setOrderType("dine-in");
   }
 
   function addCash(amount: number) {
@@ -303,7 +317,8 @@ export function PosTerminal({
     const queue = enqueueOrder({
       customerName: customer.trim(),
       amountReceived: receivedNum,
-      items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex })),
+      items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex, note: notes[l.key]?.trim() || undefined })),
+      orderType: addOn("orderTypes") ? orderType : undefined,
       discount: addOn("discounts") ? { type: discType, value: Number(discValue) || 0 } : undefined,
       paymentMethod: addOn("payments") ? payMethod : undefined,
     });
@@ -315,11 +330,14 @@ export function PosTerminal({
       shopName,
       sellerName: sellerName ?? "",
       currency,
-      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General" })),
+      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: notes[l.key]?.trim() || undefined })),
       total,
       received: receivedNum,
       change: Math.max(0, receivedNum - total),
       pendingSync: true,
+      taxRate: taxRateClient,
+      taxAmount,
+      orderType: addOn("orderTypes") ? orderType : undefined,
       ...RECEIPT_BRAND,
     });
     resetOrder();
@@ -345,7 +363,8 @@ export function PosTerminal({
         body: JSON.stringify({
           customerName: customer,
           amountReceived: receivedNum,
-          items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex })),
+          items: lines.map((l) => ({ menuItemId: l.item.id, quantity: l.qty, extraIndex: l.extraIndex, note: notes[l.key]?.trim() || undefined })),
+          orderType: addOn("orderTypes") ? orderType : undefined,
           discount: addOn("discounts") ? { type: discType, value: Number(discValue) || 0 } : undefined,
           paymentMethod: addOn("payments") ? payMethod : undefined,
           customerPhone: addOn("whatsappCustomer") ? customerPhone.trim() : undefined,
@@ -377,7 +396,10 @@ export function PosTerminal({
         shopName,
         sellerName: sellerName ?? "",
         currency,
-        lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General" })),
+        lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: notes[l.key]?.trim() || undefined })),
+        taxRate: (data.order as { taxRate?: number }).taxRate ?? taxRateClient,
+        taxAmount: (data.order as { taxAmount?: number }).taxAmount ?? taxAmount,
+        orderType: addOn("orderTypes") ? orderType : undefined,
         total: data.order.total,
         received: data.order.amountReceived,
         change: data.order.changeDue,
@@ -615,6 +637,22 @@ export function PosTerminal({
               </div>
 
               <div className="space-y-4 p-5">
+                {addOn("orderTypes") && (
+                  <div className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1">
+                    {(["dine-in", "takeaway", "delivery"] as const).map((ot) => (
+                      <button
+                        key={ot}
+                        type="button"
+                        onClick={() => setOrderType(ot)}
+                        className={`rounded-xl px-2 py-1.5 text-xs font-bold transition ${
+                          orderType === ot ? "bg-white text-orange-600 shadow" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        {ot === "dine-in" ? P.dineIn : ot === "takeaway" ? P.takeaway : P.delivery}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <Input
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
@@ -640,8 +678,9 @@ export function PosTerminal({
                           animate={{ opacity: 1, height: "auto", y: 0 }}
                           exit={{ opacity: 0, height: 0, x: 40 }}
                           transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                          className="flex items-center gap-3 overflow-hidden rounded-2xl bg-slate-50 p-2.5"
+                          className="overflow-hidden rounded-2xl bg-slate-50 p-2.5"
                         >
+                          <div className="flex items-center gap-3">
                           <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white text-2xl shadow-sm">
                             {line.item.imageData ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -680,6 +719,14 @@ export function PosTerminal({
                               {P.remove}
                             </button>
                           </div>
+                          </div>
+                          <input
+                            value={notes[line.key] ?? ""}
+                            onChange={(e) => setNotes((n) => ({ ...n, [line.key]: e.target.value }))}
+                            maxLength={140}
+                            placeholder={P.notePh}
+                            className="mt-1.5 w-full rounded-lg border-0 bg-white px-2 py-1 text-[11px] text-slate-600 shadow-sm outline-none ring-1 ring-transparent placeholder:text-slate-400 focus:ring-orange-300"
+                          />
                         </motion.div>
                       ))}
                     </AnimatePresence>
@@ -963,6 +1010,11 @@ export function PosTerminal({
                 </p>
               )}
               {receipt.customerName && <p className="text-xs">{receipt.customerName}</p>}
+              {receipt.orderType && (
+                <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-600">
+                  {receipt.orderType === "dine-in" ? P.dineIn : receipt.orderType === "takeaway" ? P.takeaway : P.delivery}
+                </p>
+              )}
               {receipt.sellerName && (
                 <p className="text-xs text-slate-500">
                   {P.by} {receipt.sellerName}
@@ -972,11 +1024,14 @@ export function PosTerminal({
             <div className="my-3 border-t border-dashed border-slate-300" />
             <div className="space-y-1.5">
               {receipt.lines.map((line) => (
-                <div key={line.name} className="flex justify-between gap-2">
-                  <span className="min-w-0 flex-1 truncate">
-                    {line.qty} × {line.name}
-                  </span>
-                  <span className="shrink-0">{formatNumber(line.lineTotal, lang)}</span>
+                <div key={line.name}>
+                  <div className="flex justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate">
+                      {line.qty} × {line.name}
+                    </span>
+                    <span className="shrink-0">{formatNumber(line.lineTotal, lang)}</span>
+                  </div>
+                  {line.note ? <p className="ps-note italic">↳ {line.note}</p> : null}
                 </div>
               ))}
             </div>
@@ -985,6 +1040,14 @@ export function PosTerminal({
               <div className="flex justify-between text-xs font-semibold text-amber-700">
                 <span>{P.discount}</span>
                 <span>−{money(receipt.discount ?? 0)}</span>
+              </div>
+            )}
+            {(receipt.taxAmount ?? 0) > 0 && (
+              <div className="mt-0.5 flex justify-between text-xs font-semibold text-slate-600">
+                <span>
+                  {P.tax} ({receipt.taxRate ?? 0}%)
+                </span>
+                <span>+{money(receipt.taxAmount ?? 0)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-black">
@@ -1032,6 +1095,7 @@ export function PosTerminal({
               {group.lines.map((line) => (
                 <p key={`${group.category}-${line.name}`} className="ps-line">
                   {formatNumber(line.qty, lang)} × {line.name}
+                  {line.note ? <span className="ps-note"> ↳ {line.note}</span> : null}
                 </p>
               ))}
               <div className="ps-div" />
@@ -1055,6 +1119,11 @@ export function PosTerminal({
               {formatTime(receipt.createdAt, lang)}
             </p>
             {receipt.customerName && <p className="ps-meta">{receipt.customerName}</p>}
+            {receipt.orderType && (
+              <p className="ps-meta ps-otype">
+                {receipt.orderType === "dine-in" ? P.dineIn : receipt.orderType === "takeaway" ? P.takeaway : P.delivery}
+              </p>
+            )}
             {receipt.sellerName && (
               <p className="ps-meta">
                 {P.by} {receipt.sellerName}
@@ -1065,10 +1134,19 @@ export function PosTerminal({
               <div key={`customer-${line.category}-${line.name}`} className="ps-line ps-split">
                 <span>
                   {formatNumber(line.qty, lang)} × {line.name}
+                  {line.note ? <span className="ps-note"> ↳ {line.note}</span> : null}
                 </span>
                 <span>{formatNumber(line.lineTotal, lang)}</span>
               </div>
             ))}
+            {(receipt.taxAmount ?? 0) > 0 && (
+              <div className="ps-line ps-split">
+                <span>
+                  {P.tax} ({receipt.taxRate ?? 0}%)
+                </span>
+                <span>+{money(receipt.taxAmount ?? 0)}</span>
+              </div>
+            )}
             <div className="ps-div" />
             <div className="ps-line ps-split ps-total">
               <span>{P.totalLabel}</span>

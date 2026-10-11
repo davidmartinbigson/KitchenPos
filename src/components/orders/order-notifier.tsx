@@ -16,6 +16,7 @@ type NotifierItem = {
   lineTotal: number;
   category: string;
   status: string;
+  note?: string;
 };
 
 type NotifierOrder = {
@@ -32,6 +33,9 @@ type NotifierOrder = {
   voidedAt: string | null;
   /** True when the guest attached an online-payment screenshot (flag only). */
   paymentProof?: boolean;
+  orderType?: string;
+  rating?: number | null;
+  feedback?: string | null;
   items: NotifierItem[];
 };
 
@@ -352,12 +356,20 @@ export function OrderNotifier() {
                       <p className="text-[11px] text-slate-500">
                         {formatTime(order.createdAt, lang)} · {formatNumber(order.items.reduce((s, l) => s + l.quantity, 0), lang)}{" "}
                         {t.sales.items.toLowerCase()}
+                        {order.orderType && order.orderType !== "dine-in" && (
+                          <span className="font-black uppercase text-sky-600"> · {order.orderType}</span>
+                        )}
+                        {(order.rating ?? 0) > 0 && (
+                          <span className="text-amber-500" title={order.feedback ?? ""}>
+                            {" "}· {"★".repeat(order.rating ?? 0)}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-black text-slate-900">{money(order.total)}</p>
                   </div>
                   <p className="mt-2 line-clamp-2 text-xs text-slate-600">
-                    {order.items.map((l) => `${formatNumber(l.quantity, lang)}× ${l.name}`).join(" · ")}
+                    {order.items.map((l) => `${formatNumber(l.quantity, lang)}× ${l.name}${l.note ? ` ✎${l.note}` : ""}`).join(" · ")}
                   </p>
                   <div className="mt-3 flex gap-2">
                     <Button
@@ -487,7 +499,7 @@ export function OrderNotifier() {
             <div className="my-3 border-t border-dashed border-slate-300" />
             <div className="space-y-1.5">
               {printOrder.items.map((line) => (
-                <div key={line.id} className="flex justify-between gap-2">
+                <div key={line.id} className="flex justify-between gap-2" title={line.note ? `Note: ${line.note}` : undefined}>
                   <span className="min-w-0 flex-1 truncate">
                     {formatNumber(line.quantity, lang)} × {line.name}
                   </span>
@@ -555,6 +567,7 @@ export function OrderNotifier() {
               {group.lines.map((line) => (
                 <p key={line.id} className="ps-line">
                   {formatNumber(line.quantity, lang)} × {line.name}
+                  {line.note ? <span className="ps-note"> ↳ {line.note}</span> : null}
                 </p>
               ))}
               <div className="ps-div" />
@@ -583,6 +596,7 @@ export function OrderNotifier() {
               <p key={line.id} className="ps-split ps-line">
                 <span>
                   {formatNumber(line.quantity, lang)} × {line.name}
+                  {line.note ? <span className="ps-note"> ↳ {line.note}</span> : null}
                 </span>
                 <span>{formatNumber(line.lineTotal, lang)}</span>
               </p>

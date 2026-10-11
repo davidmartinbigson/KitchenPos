@@ -41,6 +41,10 @@ export const users = pgTable("users", {
   receiptFooter: text("receipt_footer").notNull().default(""),
   receiptLogo: text("receipt_logo"),
   receiptSize: text("receipt_size").notNull().default("80"),
+  /** Tax add-on: VAT/GST percent configured in Settings (0–30, 0 = off). */
+  taxRate: integer("tax_rate").notNull().default(0),
+  /** Google reviews add-on: owner's public Google review link shown to guests. */
+  googleReviewUrl: text("google_review_url").notNull().default(""),
   /** Updated by the app heartbeat; master admin sees the restaurant as Online/Offline. */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -165,6 +169,14 @@ export const orders = pgTable(
   customerPhone: text("customer_phone").notNull().default(""),
   /** Payment proof add-on: guest-uploaded online-payment screenshot (small JPEG data URL). */
   paymentProof: text("payment_proof"),
+  /** Tax add-on: VAT/GST percent applied to this order (0 = none) + the computed amount. */
+  taxRate: integer("tax_rate").notNull().default(0),
+  taxAmount: integer("tax_amount").notNull().default(0),
+  /** Order types add-on: dine-in | takeaway | delivery. */
+  orderType: text("order_type").notNull().default("dine-in"),
+  /** Feedback add-on: guest 1–5 star rating + comment after the order. */
+  rating: integer("rating"),
+  feedback: text("feedback").notNull().default(""),
   /** Set when the kitchen marks all items ready/served — used for hourly heatmap & open-order age. */
   completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -192,6 +204,8 @@ export const orderItems = pgTable(
   costPrice: integer("cost_price").notNull().default(0),
     /** Kitchen progression: new -> preparing -> ready */
     status: text("status").notNull().default("new"),
+    /** Special instructions for this line ("less spicy", "no onion"). */
+    note: text("note").notNull().default(""),
   },
   (table) => [index("order_items_order_idx").on(table.orderId)],
 );

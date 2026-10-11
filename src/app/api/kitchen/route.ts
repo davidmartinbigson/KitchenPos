@@ -53,6 +53,7 @@ export async function GET() {
         customerName: order.customerName,
         takenBy: order.takenBy,
         createdAt: order.createdAt,
+        orderType: order.orderType,
         items: items.filter((item) => item.status !== "ready" || recent),
       };
     })

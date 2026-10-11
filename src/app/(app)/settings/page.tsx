@@ -23,6 +23,8 @@ export default async function SettingsPage() {
         receiptFooter: user.receiptFooter,
         receiptLogo: user.receiptLogo,
         receiptSize: user.receiptSize,
+        taxRate: (user as { taxRate?: number }).taxRate ?? 0,
+        googleReviewUrl: (user as { googleReviewUrl?: string }).googleReviewUrl ?? "",
       }}
     />
   );

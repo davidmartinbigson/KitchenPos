@@ -38,6 +38,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     menuItemId: Number(line.menuItemId),
     quantity: Math.floor(Number(line.quantity)),
     extraIndex: Number(line.extraIndex),
+    note: String((line as { note?: unknown }).note ?? "").trim().slice(0, 140),
   }));
   if (lines.some((l) => !Number.isInteger(l.menuItemId) || l.quantity < 1 || l.quantity > 20)) {
     return jsonError("CART_INVALID", 400);
@@ -68,9 +69,18 @@ export async function POST(request: Request, { params }: RouteContext) {
       costPrice: item.costPrice,
       quantity: l.quantity,
       lineTotal: unitPrice * l.quantity,
+      note: l.note,
     };
   });
-  const total = priced.reduce((s, l) => s + l.lineTotal, 0);
+
+  // Tax add-on: same VAT/GST percent as the POS, applied to guest orders too.
+  const taxRate =
+    addonEnabled(restaurant.addons, "tax") && Number(restaurant.taxRate) >= 1
+      ? Math.min(30, Math.round(Number(restaurant.taxRate)))
+      : 0;
+  const subtotal = priced.reduce((s, l) => s + l.lineTotal, 0);
+  const taxAmount = Math.round((subtotal * taxRate) / 100);
+  const total = subtotal + taxAmount;
   const itemCount = priced.reduce((s, l) => s + l.quantity, 0);
   if (total <= 0) return jsonError("CART_INVALID", 400);
 
@@ -114,8 +124,10 @@ export async function POST(request: Request, { params }: RouteContext) {
           dailyOrderNo: Number(todayCount ?? 0) + 1,
           customerName,
           takenBy: "QR Order",
-          subtotal: total,
+          subtotal,
           total,
+          taxRate,
+          taxAmount,
           amountReceived: total,
           changeDue: 0,
           itemCount,

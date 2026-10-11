@@ -14,6 +14,7 @@ export default async function PosPage() {
   const [ownerRow] = await db
     .select({
       addons: users.addons,
+      taxRate: users.taxRate,
       receiptHeader: users.receiptHeader,
       receiptFooter: users.receiptFooter,
       receiptLogo: users.receiptLogo,
@@ -48,6 +49,7 @@ export default async function PosPage() {
       sellerName={scope.sellerName}
       readOnly={scope.type === "staff"}
       addons={parseAddons(ownerRow?.addons)}
+      taxRate={ownerRow?.taxRate ?? 0}
       branding={{
         logo: ownerRow?.receiptLogo ?? "",
         header: ownerRow?.receiptHeader ?? "",

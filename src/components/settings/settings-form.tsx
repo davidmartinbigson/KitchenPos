@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Check, Coins, Globe2, LogOut, Mail, Printer, Receipt, Save, Store, UserRound } from "lucide-react";
+import { Check, Coins, Globe2, LogOut, Mail, Printer, Receipt, ReceiptText, Save, Star, Store, UserRound } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/ui";
@@ -31,6 +31,8 @@ export function SettingsForm({
     receiptFooter?: string;
     receiptLogo?: string | null;
     receiptSize?: string;
+    taxRate?: number;
+    googleReviewUrl?: string;
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -47,6 +49,8 @@ export function SettingsForm({
   const [receiptFooter, setReceiptFooter] = useState(initial.receiptFooter ?? "");
   const [receiptLogo, setReceiptLogo] = useState(initial.receiptLogo ?? "");
   const [receiptSize, setReceiptSize] = useState(initial.receiptSize ?? "80");
+  const [taxRate, setTaxRate] = useState(String(initial.taxRate ?? 0));
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(initial.googleReviewUrl ?? "");
 
   function onReceiptLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -92,6 +96,8 @@ export function SettingsForm({
           receiptFooter,
           receiptLogo,
           receiptSize,
+          ...(addons.tax === true ? { taxRate: Math.max(0, Math.min(30, Math.round(Number(taxRate) || 0))) } : {}),
+          ...(addons.googleReview === true ? { googleReviewUrl } : {}),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -327,6 +333,44 @@ export function SettingsForm({
                   </Field>
                 </div>
               </div>
+            </Card>
+          )}
+
+          {addons.tax === true && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+                <ReceiptText className="h-5 w-5 text-orange-500" /> {t.settings.taxTitle}
+              </h2>
+              <p className="mb-5 text-sm text-slate-500">{t.settings.taxHint}</p>
+              <Field label={t.settings.taxLabel} hint={t.settings.taxNote}>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+                    inputMode="numeric"
+                    className="w-28"
+                  />
+                  <span className="text-sm font-black text-slate-500">%</span>
+                </div>
+              </Field>
+            </Card>
+          )}
+
+          {addons.googleReview === true && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+                <Star className="h-5 w-5 text-orange-500" /> {t.settings.gReviewTitle}
+              </h2>
+              <p className="mb-5 text-sm text-slate-500">{t.settings.gReviewHint}</p>
+              <Field label={t.settings.gReviewLabel} hint={t.settings.gReviewNote}>
+                <Input
+                  value={googleReviewUrl}
+                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                  maxLength={300}
+                  placeholder={t.settings.gReviewPh}
+                  dir="ltr"
+                />
+              </Field>
             </Card>
           )}
 

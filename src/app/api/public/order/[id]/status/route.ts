@@ -57,6 +57,7 @@ export async function GET(request: Request, context: RouteContext) {
       total: order.total,
       createdAt: order.createdAt,
       completedAt: order.completedAt,
+      rating: order.rating ?? null,
       stage,
       items: items.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, status: i.status })),
     },

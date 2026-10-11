@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const { session, ownerId } = guard;
 
   const [ownerPref] = await db
-    .select({ dailyOrderReset: users.dailyOrderReset, addons: users.addons })
+    .select({ dailyOrderReset: users.dailyOrderReset, addons: users.addons, taxRate: users.taxRate })
     .from(users)
     .where(eq(users.id, ownerId));
 
@@ -61,6 +61,7 @@ export async function POST(request: Request) {
   const lines = rawLines.map((line) => ({
     menuItemId: Number(line.menuItemId),
     quantity: Math.floor(Number(line.quantity)),
+    note: String((line as { note?: unknown }).note ?? "").trim().slice(0, 140),
   }));
   if (lines.some((l) => !Number.isInteger(l.menuItemId) || l.quantity < 1 || l.quantity > 99)) {
     return jsonError("CART_INVALID", 400);
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
           category: product.category,
           costPrice: product.costPrice,
           status: "new",
+          note: line.note,
         };
       });
 
@@ -115,7 +117,21 @@ export async function POST(request: Request) {
             type === "percent" ? Math.round((subtotal * discountValue) / 100) : Math.min(value, subtotal);
         }
       }
-      const total = subtotal - discountAmount;
+      // Add-on: sales tax / VAT — percent set in Settings, computed server-side on the discounted subtotal.
+      const taxRate =
+        addonEnabled(ownerPref?.addons, "tax") && Number(ownerPref?.taxRate) >= 1
+          ? Math.min(30, Math.round(Number(ownerPref?.taxRate)))
+          : 0;
+      const taxAmount = Math.round(((subtotal - discountAmount) * taxRate) / 100);
+      const total = subtotal - discountAmount + taxAmount;
+
+      // Add-on: order type (dine-in | takeaway | delivery). Counter default: dine-in.
+      const ORDER_TYPES = ["dine-in", "takeaway", "delivery"] as const;
+      const orderType =
+        addonEnabled(ownerPref?.addons, "orderTypes") &&
+        (ORDER_TYPES as readonly string[]).includes(String(body.orderType))
+          ? String(body.orderType)
+          : "dine-in";
 
       // Add-on: payment method tag.
       const paymentMethod =
@@ -175,6 +191,9 @@ export async function POST(request: Request) {
           discountValue,
           discountAmount,
           paymentMethod,
+          orderType,
+          taxRate,
+          taxAmount,
           amountReceived: received,
           changeDue: received - total,
           itemCount: priced.reduce((sum, l) => sum + l.quantity, 0),
