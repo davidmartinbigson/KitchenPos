@@ -26,6 +26,8 @@ export async function POST(request: Request) {
   const password = String(body.password ?? "");
   const shopName = String(body.shopName ?? "").trim();
   const country = isCountryCode(body.country) ? String(body.country) : DEFAULT_COUNTRY;
+  const city = String(body.city ?? "").trim().slice(0, 80);
+  const area = String(body.area ?? "").trim().slice(0, 120);
 
   if (!name || !email || !shopName) return jsonError("REQUIRED", 400);
   if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 191) return jsonError("INVALID_EMAIL", 400);
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
       passwordHash,
       shopName: shopName.slice(0, 120),
       country,
+      city,
+      area,
       currency: currencyForCountry(country),
     })
     .returning({

@@ -19,6 +19,9 @@ export const users = pgTable("users", {
   currency: text("currency").notNull().default("Rs"),
   /** ISO country code (PK, US, GB, ...) picked at signup; drives the default currency. */
   country: text("country").notNull().default("PK"),
+  /** Owner-given locality (signup + settings) — powers "food near you" discovery later. */
+  city: text("city").notNull().default(""),
+  area: text("area").notNull().default(""),
   language: text("language").notNull().default("en"),
   /** Vanity public menu URL: /menu/<slug> (unique, backfilled by 0009; old /r/<id> still works). */
   slug: text("slug"),

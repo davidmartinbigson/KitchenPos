@@ -23,6 +23,8 @@ export function SettingsForm({
     shopName: string;
     currency: string;
     country: string;
+    city?: string;
+    area?: string;
     language: Lang;
     dailyOrderReset: boolean;
     addons?: Record<string, boolean>;
@@ -41,6 +43,8 @@ export function SettingsForm({
   const router = useRouter();
   const [shopName, setShopName] = useState(initial.shopName);
   const [country, setCountry] = useState(initial.country || "PK");
+  const [city, setCity] = useState(initial.city ?? "");
+  const [area, setArea] = useState(initial.area ?? "");
   const [currency, setCurrency] = useState(initial.currency);
   const [language, setLanguage] = useState<Lang>(initial.language);
   const [dailyCounter, setDailyCounter] = useState(initial.dailyOrderReset);
@@ -99,6 +103,8 @@ export function SettingsForm({
         body: JSON.stringify({
           shopName,
           country,
+          city,
+          area,
           currency,
           language,
           dailyOrderReset: dailyCounter,
@@ -171,6 +177,12 @@ export function SettingsForm({
                     </option>
                   ))}
                 </Select>
+              </Field>
+              <Field label={t.settings.city}>
+                <Input maxLength={80} value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Karachi" />
+              </Field>
+              <Field label={t.settings.area} hint={t.settings.locationHint}>
+                <Input maxLength={120} value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Clifton Block 5" />
               </Field>
             </div>
             <div className="mt-5">

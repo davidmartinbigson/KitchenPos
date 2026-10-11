@@ -56,6 +56,12 @@ export async function PATCH(request: Request) {
     if (url && !/^https:\/\//i.test(url)) return jsonError("INVALID_URL", 400);
     updates.googleReviewUrl = url;
   }
+  if (body.city !== undefined) {
+    updates.city = String(body.city).trim().slice(0, 80);
+  }
+  if (body.area !== undefined) {
+    updates.area = String(body.area).trim().slice(0, 120);
+  }
   if (body.paymentMethods !== undefined) {
     if (!Array.isArray(body.paymentMethods)) return jsonError("INVALID_PAYMENT_METHODS", 400);
     updates.paymentMethods = normalizePaymentMethods(body.paymentMethods);

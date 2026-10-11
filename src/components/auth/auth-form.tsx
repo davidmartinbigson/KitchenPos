@@ -23,7 +23,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", password: "", shopName: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", shopName: "", city: "", area: "" });
   const [country, setCountry] = useState("PK");
   const [forgotOpen, setForgotOpen] = useState(false);
   const [welcome, setWelcome] = useState<{ name: string; supportEmail: string; emailed: boolean } | null>(null);
@@ -250,6 +250,25 @@ export function AuthForm({ mode }: { mode: Mode }) {
                         </Select>
                       </div>
                     </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label={A.city} hint={A.cityHint}>
+                        <Input
+                          value={form.city}
+                          onChange={update("city")}
+                          maxLength={80}
+                          placeholder="e.g. Karachi"
+                          autoComplete="address-level2"
+                        />
+                      </Field>
+                      <Field label={A.area} hint={A.areaHint}>
+                        <Input
+                          value={form.area}
+                          onChange={update("area")}
+                          maxLength={120}
+                          placeholder="e.g. Clifton Block 5"
+                        />
+                      </Field>
+                    </div>
                   </>
                 )}
                 <Field label={A.email}>

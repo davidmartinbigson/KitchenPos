@@ -16,6 +16,8 @@ export default async function SettingsPage() {
         shopName: user.shopName,
         currency: user.currency,
         country: user.country,
+        city: (user as { city?: string }).city ?? "",
+        area: (user as { area?: string }).area ?? "",
         language: user.language === "ur" ? "ur" : "en",
         dailyOrderReset: user.dailyOrderReset,
         addons: parseAddons(user.addons),

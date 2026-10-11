@@ -92,6 +92,8 @@ export async function getCurrentUser() {
       shopName: users.shopName,
       currency: users.currency,
       country: users.country,
+      city: users.city,
+      area: users.area,
       language: users.language,
       role: users.role,
       suspended: users.suspended,
