@@ -601,6 +601,7 @@ export const en = {
       receiptBrand: { name: "Receipt branding", desc: "Add your logo, a header line and a footer line on printed bills." },
       kitchenStats: { name: "Kitchen pulse", desc: "Average prep time, done-today count and busiest hours — on the Sales page." },
       paymentProof: { name: "Payment proof (online)", desc: "Guests upload a payment screenshot right after a QR order — you verify it with the order." },
+      orderSound: { name: "Order alert sound", desc: "A short ding plays on this device the moment a new QR order arrives." },
     },
   },
   notifier: {
@@ -1221,6 +1222,7 @@ export const ur: Dict = {
       receiptBrand: { name: "رسید برانڈنگ", desc: "پرنٹ بل پر اپنا لوگو، اوپر اور نیچے اپنی لکیریں لگائیں۔" },
       kitchenStats: { name: "کچن پلس", desc: "اوسط تیاری وقت، آج مکمل اور رش والے گھنٹے — سیلز پیج پر۔" },
       paymentProof: { name: "پیمنٹ ثبوت (آن لائن)", desc: "مہمان QR آرڈر کے فوراً بعد پیمنٹ اسکرین شاٹ اپلوڈ کرے — آپ آرڈر کے ساتھ تصدیق کریں۔" },
+      orderSound: { name: "آرڈر الرٹ آواز", desc: "نیا QR آرڈر آتے ہی اس ڈیوائس پر ہلکی سی آواز بجتی ہے۔" },
     },
   },
   notifier: {
@@ -1840,6 +1842,7 @@ export const ar: Dict = {
       receiptBrand: { name: "تخصيص الإيصال", desc: "أضف شعارك وسطرًا علويًا وسفليًا على الفواتير المطبوعة." },
       kitchenStats: { name: "نبض المطبخ", desc: "متوسط وقت التحضير وعدد المكتمل اليوم وساعات الذروة — في صفحة المبيعات." },
       paymentProof: { name: "إثبات الدفع (أونلاين)", desc: "يرفع الضيف لقطة شاشة للدفع مباشرة بعد طلب QR — وأنت تتحقق منها مع الطلب." },
+      orderSound: { name: "صوت تنبيه الطلب", desc: "يُسمع صوت تنبيه قصير على هذا الجهاز فور وصول طلب QR جديد." },
     },
   },
   notifier: {

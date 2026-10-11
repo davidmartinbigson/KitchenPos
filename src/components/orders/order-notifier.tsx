@@ -6,6 +6,7 @@ import { BellRing, Check, Printer, QrCode, ReceiptText, X } from "lucide-react";
 import { Badge, Button, Modal, cn } from "@/components/ui";
 import { useI18n } from "@/components/providers/language-provider";
 import { formatDate, formatNumber, formatTime } from "@/lib/format";
+import { armOrderSound, playOrderDing } from "@/lib/sound";
 
 type NotifierItem = {
   id: number;
@@ -42,6 +43,7 @@ type ShopPrefs = {
   receiptHeader: string;
   receiptFooter: string;
   receiptSize: string;
+  addons: Record<string, boolean>;
 };
 
 const POLL_MS = 12_000;
@@ -87,6 +89,7 @@ export function OrderNotifier() {
   const [proofLoading, setProofLoading] = useState(false);
   const [bumped, setBumped] = useState(false);
   const prevPendingRef = useRef(0);
+  const prefsRef = useRef<ShopPrefs | null>(null);
   /** Flash card: the newest arrival pops above the bell for 10 seconds. */
   const [flash, setFlash] = useState<NotifierOrder | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,6 +110,7 @@ export function OrderNotifier() {
         receiptHeader: u.receiptHeader ?? "",
         receiptFooter: u.receiptFooter ?? "",
         receiptSize: u.receiptSize ?? "80",
+        addons: (u.addons as Record<string, boolean>) ?? {},
       });
     } catch {
       /* offline — keep previous prefs */
@@ -127,7 +131,12 @@ export function OrderNotifier() {
 
   useEffect(() => {
     loadPrefs();
+    armOrderSound(); // unlock audio on the owner's first tap (browser autoplay rule)
   }, [loadPrefs]);
+
+  useEffect(() => {
+    prefsRef.current = prefs;
+  }, [prefs]);
 
   useEffect(() => {
     loadOrders();
@@ -161,6 +170,7 @@ export function OrderNotifier() {
     if (fresh.length > 0) {
       // orders arrive newest-first from the API
       setFlash(fresh[0]);
+      if (prefsRef.current?.addons.orderSound === true) playOrderDing();
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
       flashTimerRef.current = setTimeout(() => setFlash(null), 10_000);
       setBumped(true);
