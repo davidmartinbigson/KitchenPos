@@ -51,6 +51,7 @@ export const metadata: Metadata = {
       "The easy point of sale for restaurants, cafés and cloud kitchens: QR code menu self-ordering, receipts, kitchen screen and daily sales reports. Works offline. English & Urdu.",
   },
   robots: { index: true, follow: true },
+  verification: { google: "OydY78SNsYBYSifIQ0WWrpW51XEaT_rsfge-5dBCkp8" },
   category: "technology",
 };
 
