@@ -48,6 +48,7 @@ const structuredData = [
     name: "Kitchen POS",
     url: BASE,
     logo: `${BASE}/icon.svg`,
+    sameAs: ["https://www.facebook.com/prokitchenpos"],
   },
 ];
 
