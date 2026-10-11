@@ -20,6 +20,7 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button, cn } from "@/components/ui";
 import { currencyForCountry, detectCountryFromLocale } from "@/lib/countries";
+import { ShowcaseSection } from "@/components/landing/showcase";
 
 /** Visitor's local currency symbol (Rs for PK, $ for US, £ for UK, ...). */
 function useVisitorCurrency() {
@@ -314,6 +315,9 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
           })}
         </div>
       </section>
+
+      {/* Animated product tour: POS, QR ordering, kitchen screen, dashboard */}
+      <ShowcaseSection />
 
       {/* How it works */}
       <section className="mx-auto max-w-7xl px-5 py-20">

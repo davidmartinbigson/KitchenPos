@@ -126,6 +126,35 @@ export const en = {
     liveTotal: "Order total",
     liveChange: "Change due",
     liveItems: "Items",
+    showcaseLabel: "Live product tour",
+    showcaseTitle: "See it in action",
+    showcaseSubtitle:
+      "Billing, QR ordering, the kitchen screen and your daily numbers — watch how everything runs together.",
+    showcaseTabs: { pos: "POS billing", qr: "QR menu ordering", kitchen: "Kitchen screen", sales: "Sales dashboard" },
+    showcasePosTitle: "Tap-to-sell billing",
+    showcasePosDesc:
+      "Your menu with photos and prices. Tap to build the order — total, received and change update instantly, even offline.",
+    showcaseQrTitle: "Guests order from their phone",
+    showcaseQrDesc:
+      "Every table gets a QR code. Guests open your menu link, pick items, and the order pops up inside your POS — no app, no commission.",
+    showcaseKitchenTitle: "The kitchen knows what to cook",
+    showcaseKitchenDesc:
+      "Orders flow onto the kitchen display. Cooks move each dish new → preparing → ready, and the front desk sees it live.",
+    showcaseSalesTitle: "Your numbers, always live",
+    showcaseSalesDesc:
+      "Daily totals, best-selling items and weekly trends on one dashboard — you always know how the kitchen is doing.",
+    showcaseNewOrder: "New QR order",
+    showcaseTable: "Table",
+    showcasePreparing: "Preparing",
+    showcaseReady: "Ready",
+    showcaseNew: "New",
+    showcaseTodaySales: "Today's sales",
+    showcaseOrders: "Orders",
+    showcaseAvgOrder: "Avg. order",
+    showcaseTopItems: "Best sellers",
+    showcaseThisWeek: "This week",
+    showcaseCart: "Order",
+    showcaseTotal: "Total",
   },
   auth: {
     loginTitle: "Welcome back",
@@ -711,6 +740,35 @@ export const ur: Dict = {
     liveTotal: "آرڈر کا ٹوٹل",
     liveChange: "بقایا واپس",
     liveItems: "آئٹمز",
+    showcaseLabel: "لائیو پروڈکٹ ٹور",
+    showcaseTitle: "دیکھیں یہ عملاً کیسے چلتا ہے",
+    showcaseSubtitle:
+      "بلنگ، QR آرڈرنگ، کچن اسکرین اور آپ کی روزانہ کی رپورٹ — دیکھیں سب کچھ ساتھ مل کر کیسے چلتا ہے۔",
+    showcaseTabs: { pos: "POS بلنگ", qr: "QR مینیو آرڈرنگ", kitchen: "کچن اسکرین", sales: "سیلز ڈیش بورڈ" },
+    showcasePosTitle: "ایک ٹیپ میں بلنگ",
+    showcasePosDesc:
+      "تصویروں اور قیمتوں والا آپ کا مینیو۔ ٹیپ کریں اور آرڈر بنے — ٹوٹل، وصولی اور بقایا فوراً اپڈیٹ، آف لائن بھی۔",
+    showcaseQrTitle: "گاہک اپنے فون سے آرڈر کریں",
+    showcaseQrDesc:
+      "ہر ٹیبل کا اپنا QR کوڈ۔ گاہک آپ کا مینیو لنک کھولیں، آئٹمز چنیں اور آرڈر سیدھا آپ کے POS میں آ جائے — کوئی ایپ نہیں، کوئی کمیشن نہیں۔",
+    showcaseKitchenTitle: "کچن کو پتا ہوتا ہے کیا بنانا ہے",
+    showcaseKitchenDesc:
+      "آرڈر کچن ڈسپلے پر آتے ہیں۔ باورچی ہر ڈش کو نیا → تیار ہو رہا → تیار کرتا ہے، اور فرنٹ ڈیسک سب لائیو دیکھتا ہے۔",
+    showcaseSalesTitle: "آپ کے نمبر، ہمیشہ لائیو",
+    showcaseSalesDesc:
+      "روزانہ کا ٹوٹل، سب سے زیادہ بکنے والی ڈشز اور ہفتہ وار رجحان ایک ہی ڈیش بورڈ پر — آپ کو ہر بات کا پتا رہتا ہے۔",
+    showcaseNewOrder: "نیا QR آرڈر",
+    showcaseTable: "ٹیبل",
+    showcasePreparing: "تیار ہو رہا",
+    showcaseReady: "تیار",
+    showcaseNew: "نیا",
+    showcaseTodaySales: "آج کی سیلز",
+    showcaseOrders: "آرڈرز",
+    showcaseAvgOrder: "اوسط آرڈر",
+    showcaseTopItems: "مقبول ترین",
+    showcaseThisWeek: "اس ہفتے",
+    showcaseCart: "آرڈر",
+    showcaseTotal: "ٹوٹل",
   },
   auth: {
     loginTitle: "خوش آمدید",
