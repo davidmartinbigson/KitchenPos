@@ -118,6 +118,7 @@ export function SettingsForm({
   const languages: { value: Lang; title: string; sub: string; sample: string }[] = [
     { value: "en", title: "English", sub: "Default", sample: "Sell faster. Know your numbers." },
     { value: "ur", title: "اردو", sub: "Urdu", sample: "تیزی سے بیچیں۔ اپنے حساب کتاب کو جانیں۔" },
+    { value: "ar", title: "العربية", sub: "Arabic", sample: "بِع أسرع. اعرف أرقامك." },
   ];
 
   return (
@@ -351,7 +352,7 @@ export function SettingsForm({
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={cn("text-2xl font-black", opt.value === "ur" && "font-urdu")}>{opt.title}</span>
+                      <span className={cn("text-2xl font-black", opt.value === "ur" && "font-urdu", opt.value === "ar" && "font-arabic")}>{opt.title}</span>
                       <span
                         className={cn(
                           "grid h-7 w-7 place-items-center rounded-full",
@@ -364,7 +365,7 @@ export function SettingsForm({
                     <p className={cn("mt-1 text-xs font-semibold", active ? "text-orange-100" : "text-slate-500")}>
                       {opt.sub}
                     </p>
-                    <p className={cn("mt-4 text-sm", opt.value === "ur" && "font-urdu text-base leading-loose", active ? "text-white/95" : "text-slate-600")}>
+                    <p className={cn("mt-4 text-sm", opt.value === "ur" && "font-urdu text-base leading-loose", opt.value === "ar" && "font-arabic text-base leading-loose", active ? "text-white/95" : "text-slate-600")}>
                       {opt.sample}
                     </p>
                   </motion.button>
@@ -416,7 +417,7 @@ export function SettingsForm({
 
           <Card className="p-6">
             <h2 className="mb-2 text-lg font-bold text-slate-900">{t.settings.dangerTitle}</h2>
-            <p className="mb-4 text-sm text-slate-500">{lang === "ur" ? "اس ڈیوائس سے لاگ آؤٹ کریں۔" : "Sign out of this device."}</p>
+            <p className="mb-4 text-sm text-slate-500">{lang === "ur" ? "اس ڈیوائس سے لاگ آؤٹ کریں۔" : lang === "ar" ? "سجّل الخروج من هذا الجهاز." : "Sign out of this device."}</p>
             <button
               type="button"
               onClick={logout}

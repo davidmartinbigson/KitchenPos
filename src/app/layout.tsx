@@ -75,14 +75,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const theme = cookieStore.get("kpos_theme")?.value === "dark" ? "dark" : "";
 
   return (
-    <html lang={lang} dir={lang === "ur" ? "rtl" : "ltr"} className={theme} suppressHydrationWarning>
+    <html lang={lang} dir={lang === "ur" || lang === "ar" ? "rtl" : "ltr"} className={theme} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap"
         />
       </head>
       <body className="text-slate-900 antialiased">

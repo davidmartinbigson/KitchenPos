@@ -8,8 +8,9 @@ import { cn } from "@/components/ui";
 import type { Lang } from "@/lib/i18n";
 
 const options: { value: Lang; label: string }[] = [
-  { value: "en", label: "English" },
+  { value: "en", label: "EN" },
   { value: "ur", label: "اردو" },
+  { value: "ar", label: "عربي" },
 ];
 
 export function LanguageToggle({ className, compact = false }: { className?: string; compact?: boolean }) {
@@ -38,6 +39,7 @@ export function LanguageToggle({ className, compact = false }: { className?: str
               "relative z-10 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors",
               active ? "text-white" : "text-slate-600 hover:text-slate-900",
               option.value === "ur" && "font-urdu text-base leading-none",
+            option.value === "ar" && "font-arabic text-base leading-none",
             )}
           >
             {active && (

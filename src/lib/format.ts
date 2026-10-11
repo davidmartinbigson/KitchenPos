@@ -8,12 +8,14 @@ export function formatMoney(amount: number, currency = "Rs") {
 }
 
 export function formatNumber(n: number, lang: Lang = "en") {
-  return n.toLocaleString(lang === "ur" ? "ur-PK" : "en-US");
+  const locale = lang === "ur" ? "ur-PK" : lang === "ar" ? "ar-AE-u-nu-latn" : "en-US";
+  return n.toLocaleString(locale);
 }
 
 export function formatDate(value: string | Date, lang: Lang = "en") {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleDateString(lang === "ur" ? "ur-PK" : "en-US", {
+  const locale = lang === "ur" ? "ur-PK" : lang === "ar" ? "ar-AE" : "en-US";
+  return d.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -22,7 +24,8 @@ export function formatDate(value: string | Date, lang: Lang = "en") {
 
 export function formatTime(value: string | Date, lang: Lang = "en") {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-US", {
+  const localeTz = lang === "ur" ? "ur-PK" : lang === "ar" ? "ar-AE-u-nu-latn" : "en-US";
+  return d.toLocaleTimeString(localeTz, {
     hour: "2-digit",
     minute: "2-digit",
   });

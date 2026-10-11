@@ -6,6 +6,7 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-urdu: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Noto Naskh Arabic", serif;
+  --font-arabic: "Noto Naskh Arabic", "Noto Nastaliq Urdu", serif;
 
   --animate-float: float 7s ease-in-out infinite;
   --animate-float-slow: float 11s ease-in-out infinite;
@@ -108,9 +109,14 @@ body {
   min-height: 100vh;
 }
 
-html[dir="rtl"] body {
+html[lang="ur"] body {
   font-family: var(--font-urdu), var(--font-sans);
   line-height: 1.9;
+}
+
+html[lang="ar"] body {
+  font-family: var(--font-arabic), var(--font-sans);
+  line-height: 1.8;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -362,8 +368,12 @@ html.dark .scroll-thin {
   scrollbar-color: rgba(71, 85, 105, 0.6) transparent;
 }
 
-html[dir="rtl"] .font-display {
+html[lang="ur"] .font-display {
   font-family: var(--font-urdu), var(--font-sans);
+}
+
+html[lang="ar"] .font-display {
+  font-family: var(--font-arabic), var(--font-sans);
 }
 
 /* Subtle custom scrollbar */

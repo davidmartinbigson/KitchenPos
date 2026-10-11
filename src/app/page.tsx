@@ -24,7 +24,7 @@ const structuredData = [
       "Point of sale (POS) software for restaurants, cafés and cloud kitchens: free QR code menu self-ordering, receipt printing, kitchen display, staff accounts and daily sales reports. Works offline. English & Urdu.",
     featureList:
       "QR code menu, contactless self-ordering, POS billing, receipt printing, kitchen display screen, staff accounts, daily sales analytics, offline PWA, English and Urdu",
-    inLanguage: ["en", "ur"],
+    inLanguage: ["en", "ur", "ar"],
     offers: {
       "@type": "Offer",
       price: "0",

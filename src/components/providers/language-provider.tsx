@@ -25,7 +25,7 @@ export function LanguageProvider({
 }) {
   const [lang, setLangState] = useState<Lang>(initialLang || DEFAULT_LANG);
 
-  const dir = lang === "ur" ? "rtl" : "ltr";
+  const dir = lang === "en" ? "ltr" : "rtl";
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -53,7 +53,7 @@ export function LanguageProvider({
       dir,
       t: dictionaries[lang],
       setLang,
-      isUrdu: lang === "ur",
+      isUrdu: lang !== "en", // any RTL script (ur / ar) — drawer slides from the end side
     }),
     [lang, dir, setLang],
   );
