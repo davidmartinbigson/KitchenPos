@@ -9,12 +9,49 @@ import { DEFAULT_LANG, LANG_COOKIE, isLang, type Lang } from "@/lib/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://prokitchenpos.com"),
+  applicationName: "Kitchen POS",
   title: {
-    default: "Kitchen POS · Restaurant point of sale",
+    default: "Kitchen POS — Restaurant POS Software with Free QR Code Menu",
     template: "%s · Kitchen POS",
   },
   description:
-    "Restaurant POS: create your kitchen, add menu items with pictures and prices, take orders, calculate change and track daily sales. English & Urdu.",
+    "Kitchen POS is an easy point of sale (POS) system for restaurants, cafés and cloud kitchens: free QR code menu self-ordering, receipt printing, kitchen display screen, staff accounts and daily sales reports. Works offline. English & Urdu. Used in Pakistan, UAE, UK and USA.",
+  keywords: [
+    "kitchen pos",
+    "kitchen point of sale",
+    "restaurant pos",
+    "restaurant pos system",
+    "restaurant pos software",
+    "pos system for restaurants",
+    "cafe pos system",
+    "qr code menu",
+    "qr menu ordering system",
+    "free qr menu for restaurant",
+    "restaurant pos pakistan",
+    "pos system uae",
+    "restaurant pos uk",
+    "cloud kitchen pos",
+    "point of sale software",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "Kitchen POS",
+    url: "https://prokitchenpos.com",
+    locale: "en_US",
+    title: "Kitchen POS — Restaurant POS Software with Free QR Code Menu",
+    description:
+      "The easy point of sale for restaurants, cafés and cloud kitchens: QR code menu self-ordering, receipts, kitchen screen and daily sales reports. Works offline. English & Urdu.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kitchen POS — Restaurant POS Software with Free QR Code Menu",
+    description:
+      "The easy point of sale for restaurants, cafés and cloud kitchens: QR code menu self-ordering, receipts, kitchen screen and daily sales reports. Works offline. English & Urdu.",
+  },
+  robots: { index: true, follow: true },
+  category: "technology",
 };
 
 export const viewport: Viewport = {

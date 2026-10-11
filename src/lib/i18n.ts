@@ -64,12 +64,12 @@ export const en = {
   },
   landing: {
     badge: "Restaurant POS made simple",
-    heroTitle: "Run your kitchen like a pro.",
+    heroTitle: "Kitchen POS Software for Restaurants & Cafés.",
     heroHighlight: "Sell faster. Know your numbers.",
     heroSubtitle:
-      "Create your own kitchen, add menu items with pictures and prices, take customer orders in seconds, calculate totals & change, and watch your daily sales grow.",
+      "The easy point of sale for your kitchen: build a digital menu with photos and prices, let guests self-order from a free QR code menu, print receipts and track daily sales. Trusted by restaurants in Pakistan, UAE, UK & USA — in English and Urdu.",
     featuresTitle: "Everything your kitchen needs",
-    featuresSubtitle: "Simple tools built for busy restaurants, cafés and food stalls.",
+    featuresSubtitle: "Simple, powerful tools for restaurants, cafés, cloud kitchens and food stalls — from fast POS billing to QR code menu ordering.",
     f1Title: "Custom menu with pictures",
     f1Desc: "Add every dish with a photo, category, description and price.",
     f2Title: "Fast point of sale",
@@ -88,6 +88,34 @@ export const en = {
     step3: "Take orders & track daily sales",
     ctaTitle: "Ready to open your digital kitchen?",
     ctaSubtitle: "Sign up in under a minute.",
+    faqTitle: "Frequently asked questions",
+    faqSubtitle: "Everything restaurant owners ask before switching to Kitchen POS.",
+    faqs: [
+      {
+        q: "What is a kitchen POS system?",
+        a: "A kitchen POS (point of sale) system is the software that runs your restaurant's daily selling — your menu, orders, receipts and sales reports in one place. Kitchen POS works on any phone, tablet or computer; no special hardware is needed.",
+      },
+      {
+        q: "Is the QR code menu really free?",
+        a: "Yes. Every Kitchen POS account gets a free QR code menu with a shareable link. Guests scan it, browse your live menu with photos and prices, and their orders land straight in your kitchen — no app installs, no commissions.",
+      },
+      {
+        q: "Does Kitchen POS work offline?",
+        a: "Yes. Kitchen POS is an installable offline PWA. Keep taking orders during internet outages — everything syncs back automatically when you are online again.",
+      },
+      {
+        q: "Which countries and languages does it support?",
+        a: "Kitchen POS is used by restaurants in Pakistan, the UAE, the UK and the USA. The interface is English-first with full Urdu support, and you pick your currency (Rs, AED, $, £) when you sign up.",
+      },
+      {
+        q: "Can I print receipts on a thermal printer?",
+        a: "Yes — receipts print in one tap on any 58mm or 80mm thermal printer, with your logo and a custom header and footer if you want them.",
+      },
+      {
+        q: "How much does Kitchen POS cost?",
+        a: "You can create your kitchen free and try everything. An affordable monthly plan keeps your kitchen active — no setup fees, no per-order commission, cancel anytime.",
+      },
+    ],
     featuresNav: "Features",
     whyTitle: "Why it fits your restaurant",
     whyText1:
@@ -621,12 +649,12 @@ export const ur: Dict = {
   },
   landing: {
     badge: "آسان ریسٹورنٹ POS سسٹم",
-    heroTitle: "اپنا کچن پروفیشنل انداز میں چلائیں۔",
+    heroTitle: "ریسٹورنٹ اور کیفے کے لیے کچن POS سسٹم۔",
     heroHighlight: "تیزی سے بیچیں۔ اپنے حساب کتاب کو جانیں۔",
     heroSubtitle:
-      "اپنا کچن بنائیں، تصویر اور قیمت کے ساتھ مینو آئٹمز شامل کریں، گاہک کے آرڈر چند سیکنڈ میں لیں، ٹوٹل اور بقایا رقم خودکار نکالیں، اور روزانہ کی سیلز بڑھتی ہوئی دیکھیں۔",
+      "آپ کے کچن کا آسان پوائنٹ آف سیل: تصویروں اور قیمتوں والا ڈیجیٹل مینو بنائیں، مفت QR کوڈ مینو سے گاہک خود آرڈر کریں، رسیدیں پرنٹ کریں اور روزانہ کی سیلز دیکھیں۔ پاکستان، UAE، UK اور USA کے ریسٹورنٹس کا انتخاب — اردو اور انگلش میں۔",
     featuresTitle: "آپ کے کچن کی ہر ضرورت، ایک جگہ",
-    featuresSubtitle: "مصروف ریسٹورنٹ، کیفے اور فوڈ اسٹال کے لیے سادہ ٹولز۔",
+    featuresSubtitle: "ریسٹورنٹ، کیفے، کلاؤڈ کچن اور فوڈ اسٹال کے لیے سادہ مگر طاقتور ٹولز — تیز POS بلنگ سے لے کر QR کوڈ مینو آرڈرنگ تک۔",
     f1Title: "تصویروں کے ساتھ مینو",
     f1Desc: "ہر ڈش کو تصویر، کیٹگری، تفصیل اور قیمت کے ساتھ شامل کریں۔",
     f2Title: "تیز فروخت",
@@ -645,6 +673,34 @@ export const ur: Dict = {
     step3: "آرڈر لیں اور روزانہ کی سیلز دیکھیں",
     ctaTitle: "اپنا ڈیجیٹل کچن شروع کرنے کے لیے تیار ہیں؟",
     ctaSubtitle: "ایک منٹ سے کم میں سائن اپ کریں اور فروخت شروع کریں۔",
+    faqTitle: "اکثر پوچھے گئے سوالات",
+    faqSubtitle: "Kitchen POS منتخب کرنے سے پہلے ریسٹورنٹ مالکان کے عام سوالات۔",
+    faqs: [
+      {
+        q: "کچن POS سسٹم کیا ہوتا ہے؟",
+        a: "کچن POS (پوائنٹ آف سیل) آپ کے ریسٹورنٹ کی روزمرہ فروخت چلانے والا سافٹ ویئر ہے — مینو، آرڈر، رسیدیں اور سیلز رپورٹس ایک ہی جگہ۔ Kitchen POS کسی بھی موبائل، ٹیبلیٹ یا کمپیوٹر پر چلتا ہے؛ کوئی خاص مشین درکار نہیں۔",
+      },
+      {
+        q: "کیا QR کوڈ مینو واقعی مفت ہے؟",
+        a: "جی ہاں۔ ہر Kitchen POS اکاؤنٹ کو مفت QR کوڈ مینو اور شیئر ایبل لنک ملتا ہے۔ گاہک اسکین کریں، تصویروں اور قیمتوں والا لائیو مینو دیکھیں اور آرڈر سیدھا آپ کے کچن میں آئے — کوئی ایپ نہیں، کوئی کمیشن نہیں۔",
+      },
+      {
+        q: "کیا Kitchen POS آف لائن چلتا ہے؟",
+        a: "جی ہاں۔ یہ انسٹال ایبل آف لائن PWA ہے — انٹرنیٹ بند ہونے پر بھی آرڈر لیتا رہیں، دوبارہ آنے پر سب خودکار سنک ہو جاتا ہے۔",
+      },
+      {
+        q: "یہ کن ممالک اور زبانوں میں چلتا ہے؟",
+        a: "پاکستان، UAE، UK اور USA کے ریسٹورنٹ اسے استعمال کر رہے ہیں۔ انٹرفیس انگلش میں ہے اور مکمل اردو سپورٹ بھی موجود ہے؛ سائن اپ پر اپنی کرنسی (Rs, AED, $, £) منتخب کریں۔",
+      },
+      {
+        q: "کیا تھرمل پرنٹر پر رسید پرنٹ ہو سکتی ہے؟",
+        a: "جی ہاں — کسی بھی 58mm یا 80mm تھرمل پرنٹر پر ایک ٹیپ میں، چاہیں تو اپنے لوگو اور اپنی ہیڈر اور فوٹر سمیت۔",
+      },
+      {
+        q: "Kitchen POS کی قیمت کیا ہے؟",
+        a: "اپنا کچن مفت بنائیں اور سب کچھ آزمائیں۔ سستا ماہانہ پلان آپ کا کچن فعال رکھتا ہے — سیٹ اپ فیس نہیں، فی آرڈر کمیشن نہیں، کبھی بھی بند کریں۔",
+      },
+    ],
     featuresNav: "فیچرز",
     whyTitle: "آپ کے ریسٹورنٹ کے لیے بہترین کیوں",
     whyText1:

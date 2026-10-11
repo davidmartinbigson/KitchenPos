@@ -368,6 +368,40 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
         </motion.div>
       </section>
 
+      {/* FAQ — visible content feeds the FAQPage JSON-LD for Google rich results */}
+      <section className="mx-auto max-w-4xl px-5 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center"
+        >
+          <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{L.faqTitle}</h2>
+          <p className="mt-3 text-lg text-slate-600">{L.faqSubtitle}</p>
+        </motion.div>
+        <div className="mt-10 space-y-3">
+          {L.faqs.map((item, i) => (
+            <motion.details
+              key={item.q}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: Math.min(i * 0.06, 0.3), duration: 0.5 }}
+              className="group rounded-2xl border border-white bg-white/80 px-6 py-4 shadow-sm backdrop-blur open:ring-2 open:ring-orange-200"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left text-base font-bold text-slate-900 rtl:text-right [&::-webkit-details-marker]:hidden">
+                {item.q}
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-orange-50 text-sm font-black text-orange-600 transition group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 leading-relaxed text-slate-600">{item.a}</p>
+            </motion.details>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto max-w-5xl px-5 pb-20 text-center">
         <motion.div
