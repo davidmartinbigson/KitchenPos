@@ -73,7 +73,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
   const support = supportEmail();
   const displayName = name?.trim() || to;
   const gif = loadWelcomeGif();
-
+  const gifLink = "https://prokitchenpos.com/assets/welcome-tutorial.gif";
   const stepsHtml = `
     <ol style="padding-left:20px;color:#1e293b;line-height:1.7">
       <li><b>Insert your Activation Key</b> — you'll find it on your dashboard.<br/>
@@ -87,8 +87,13 @@ export async function sendWelcomeEmail(to: string, name: string) {
   await createTransporter().sendMail({
     from: fromAddress(),
     to,
-    subject: "🎉 Welcome to Kitchen POS — your account has been created!",
-    text: `Congratulations${displayName ? `, ${displayName}` : ""}! Your Kitchen POS account has been created.\n\nNext steps:\n1) Insert your Activation Key on your dashboard (no key? email ${support})\n2) Add your menu items\n3) Open Point of Sale\n4) Place your first order!\n\nA quick-start animated guide is attached to this email.`,
+    replyTo: support,
+    headers: {
+      "List-Unsubscribe": `<mailto:${support}?subject=unsubscribe>`,
+      "List-Id": "Kitchen POS <welcome.prokitchenpos.com>",
+    },
+    subject: "Welcome to Kitchen POS — your account is ready",
+    text: `Congratulations${displayName ? `, ${displayName}` : ""}! Your Kitchen POS account has been created.\n\nNext steps:\n1) Insert your Activation Key on your dashboard (no key? email ${support})\n2) Add your menu items\n3) Open Point of Sale\n4) Place your first order!\n\nWatch the 60-second quick start here: ${gif ? gifLink : "https://prokitchenpos.com"}`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
         <div style="background:linear-gradient(90deg,#f97316,#f43f5e);border-radius:16px 16px 0 0;padding:28px 24px;text-align:center">
@@ -105,22 +110,14 @@ export async function sendWelcomeEmail(to: string, name: string) {
           </div>
           ${
             gif
-              ? `<p style="color:#1e293b;font-size:15px;margin-bottom:8px"><b>Watch the 60-second quick-start:</b></p>
-                 <img src="cid:welcomegif" width="480" alt="Kitchen POS quick start tutorial" style="width:100%;max-width:480px;border-radius:12px;border:1px solid #e2e8f0"/>`
+              ? `<p style="margin:18px 0 8px">
+                   <a href="${gifLink}" style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;padding:10px 18px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:bold;display:inline-block">Watch the 60-second quick-start video</a>
+                 </p>`
               : ""
           }
           <p style="color:#94a3b8;font-size:12px;margin-top:22px">— The Kitchen POS team</p>
         </div>
       </div>`,
-    attachments: gif
-      ? [
-          {
-            filename: "kitchen-pos-quick-start.gif",
-            content: gif,
-            cid: "welcomegif",
-          },
-        ]
-      : [],
   });
   return true;
 }
