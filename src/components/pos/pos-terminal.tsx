@@ -483,7 +483,7 @@ export function PosTerminal({
           }
         />
       ) : (
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_400px]">
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_380px]">
           {/* Menu grid */}
           <section className="min-w-0 space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -518,7 +518,7 @@ export function PosTerminal({
             {filtered.length === 0 ? (
               <p className="py-16 text-center text-slate-500">{P.emptyFilter}</p>
             ) : (
-              <motion.div layout className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+              <motion.div layout className="grid grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-3 sm:gap-4">
                 <AnimatePresence mode="popLayout">
                   {filtered.map((item, i) => {
                     const qty = cart[item.id] ?? 0;
