@@ -30,6 +30,7 @@ export type AddonsMap = Partial<Record<AddonKey, boolean>>;
 /** Add-ons that are live in production. Others stay hidden from Settings for now. */
 /** Ready & safe to show in Settings. Everything else stays hidden. */
 export const READY_ADDONS: AddonKey[] = [
+  "whatsappCustomer",
   "discounts",
   "payments",
   "stock",
