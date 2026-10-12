@@ -615,7 +615,10 @@ export function PosTerminal({
           </section>
 
           {/* Order panel */}
-          <aside id="order-panel" className="lg:sticky lg:top-6">
+          <aside
+            id="order-panel"
+            className="scroll-thin overscroll-contain lg:sticky lg:top-6 lg:max-h-[calc(100dvh-6.5rem)] lg:overflow-y-auto"
+          >
             <Card className="overflow-hidden p-0">
               <div className="flex items-center justify-between bg-gradient-to-r from-slate-950 to-slate-800 px-5 py-4 text-white">
                 <div className="flex items-center gap-2.5">
