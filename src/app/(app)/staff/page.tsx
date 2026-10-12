@@ -7,7 +7,7 @@ import { StaffManager } from "@/components/staff/staff-manager";
 export const metadata = { title: "Team & Roles" };
 
 export default async function StaffPage() {
-  const user = await requireOwnerPage();
+  const user = await requireOwnerPage({ ownerOnly: true });
 
   // Suggest category names the owner already uses on their menu.
   const rows = await db

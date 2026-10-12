@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, count, desc, eq, gte, isNull, sql, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders } from "@/db/schema";
-import { requireActiveUser } from "@/lib/api";
+import { requireApp } from "@/lib/api";
 
 /** Format a Date's UTC fields as YYYY-MM-DD */
 function utcKey(d: Date) {
@@ -17,8 +17,10 @@ function utcKey(d: Date) {
  * today = client's local date (YYYY-MM-DD) so "today" matches the user's clock.
  */
 export async function GET(request: Request) {
-  const { user, response } = await requireActiveUser();
-  if (!user) return response;
+  // Owner and (full-control) cashiers read the same shop stats via ownerId.
+  const guard = await requireApp(["owner", "cashier"]);
+  if (!guard.ok) return guard.response;
+  const ownerId = guard.ownerId;
 
   const url = new URL(request.url);
   const days = Math.min(Math.max(Number(url.searchParams.get("days") ?? 7) || 7, 1), 365);
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
       orderCount: count(orders.id).mapWith(Number),
     })
     .from(orders)
-    .where(and(eq(orders.userId, user.id), gte(orders.createdAt, fromInstant), isNull(orders.voidedAt)))
+    .where(and(eq(orders.userId, ownerId), gte(orders.createdAt, fromInstant), isNull(orders.voidedAt)))
     .groupBy(localDay);
 
   const dailyMap = new Map(dailyRows.map((r) => [r.day, r]));
@@ -65,12 +67,12 @@ export async function GET(request: Request) {
       orderCount: count(orders.id).mapWith(Number),
     })
     .from(orders)
-    .where(and(eq(orders.userId, user.id), isNull(orders.voidedAt)));
+    .where(and(eq(orders.userId, ownerId), isNull(orders.voidedAt)));
 
   const [menuCount] = await db
     .select({ value: count(menuItems.id).mapWith(Number) })
     .from(menuItems)
-    .where(eq(menuItems.userId, user.id));
+    .where(eq(menuItems.userId, ownerId));
 
   const todayRow = dailyMap.get(todayKey);
 
@@ -82,7 +84,7 @@ export async function GET(request: Request) {
     })
     .from(orderItems)
     .innerJoin(orders, eq(orderItems.orderId, orders.id))
-    .where(and(eq(orders.userId, user.id), isNull(orders.voidedAt)))
+    .where(and(eq(orders.userId, ownerId), isNull(orders.voidedAt)))
     .groupBy(orderItems.name)
     .orderBy(desc(sum(orderItems.quantity)))
     .limit(5);

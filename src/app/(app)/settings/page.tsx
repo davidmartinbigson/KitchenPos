@@ -6,7 +6,7 @@ import { normalizePaymentMethods } from "@/lib/payment-methods";
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const user = await requireOwnerPage();
+  const user = await requireOwnerPage({ ownerOnly: true });
 
   return (
     <SettingsForm

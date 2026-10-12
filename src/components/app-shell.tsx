@@ -79,7 +79,7 @@ const ownerNav = [
 const cashierNav = [{ href: "/pos", key: "pos", icon: ShoppingBasket }] as const;
 
 /** Full-control cashier: everything except the owner-only Live view. */
-const cashierFullNav = ownerNav.filter((i) => i.key !== "live");
+const cashierFullNav = ownerNav.filter((i) => i.key !== "live" && i.key !== "team" && i.key !== "settings");
 /** Mobile bar: swap Live for Sales so nothing interactive is lost. */
 const cashierFullMobileNav = [ownerNav[0], ownerNav[2], ownerNav[3], ownerNav[4], ownerNav[5]];
 
