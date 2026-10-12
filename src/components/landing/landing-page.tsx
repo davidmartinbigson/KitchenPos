@@ -185,6 +185,9 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
                 <Link href="/features" className="hidden sm:block">
                   <Button variant="ghost">{L.featuresNav}</Button>
                 </Link>
+                <Link href="/demo" className="hidden sm:block">
+                  <Button variant="secondary" size="md">🖥️ {L.demoLive}</Button>
+                </Link>
                 <Link href="/signup">
                   <Button size="md">{t.signup}</Button>
                 </Link>

@@ -28,6 +28,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, EmptyState, Input, Modal, cn, errorText } from "@/components/ui";
 import { formatDate, formatMoney, formatNumber, formatTime } from "@/lib/format";
 import { enqueueOrder, loadQueue, removeFromQueue, saveQueue, type QueuedOrder } from "@/lib/offline-queue";
+import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
 import type { MenuItemDTO } from "@/lib/types";
 
 type ReceiptData = {
@@ -80,6 +81,7 @@ export function PosTerminal({
   branding,
   taxRate = 0,
   paymentMethods = [],
+  demoMode = false,
 }: {
   initialItems: MenuItemDTO[];
   currency: string;
@@ -92,6 +94,8 @@ export function PosTerminal({
   taxRate?: number;
   /** Payments add-on: owner's custom method names (cash is always offered). */
   paymentMethods?: string[];
+  /** Static on-device demo: checkout simulates locally, zero API traffic. */
+  demoMode?: boolean;
 }) {
   const addOn = (key: string) => addons[key] === true;
   const { t, lang } = useI18n();
@@ -348,9 +352,49 @@ export function PosTerminal({
     setSubmitting(false);
   }
 
+  /** Demo mode: pretend the sale just happened — everything stays on the visitor's device. */
+  function checkoutDemo() {
+    const createdAt = new Date().toISOString();
+    const orderNumber = nextDemoOrderNo();
+    recordDemoOrder({
+      orderNumber,
+      at: createdAt,
+      customer: customer.trim() || "Guest",
+      items: lines.map((l) => ({ name: l.displayName, qty: l.qty, lineTotal: l.lineTotal })),
+      total,
+    });
+    setReceipt({
+      orderNumber,
+      createdAt,
+      customerName: customer.trim(),
+      shopName,
+      sellerName: sellerName ?? "",
+      currency,
+      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: notes[l.key]?.trim() || undefined })),
+      total,
+      received: receivedNum,
+      change: Math.max(0, receivedNum - total),
+      discount: discountAmount,
+      taxRate: taxRateClient,
+      taxAmount,
+      orderType: addOn("orderTypes") ? orderType : undefined,
+      customerPhone: addOn("whatsappCustomer") ? customerPhone.trim() : undefined,
+      paymentMethod: addOn("payments") ? payMethod : undefined,
+      ...RECEIPT_BRAND,
+    });
+    resetOrder();
+    toast.show(P.orderSaved, "success");
+    setSubmitting(false);
+  }
+
   async function checkout() {
     if (!canSubmit) {
       if (!enoughCash && lines.length > 0) toast.show(P.insufficient, "error");
+      return;
+    }
+    if (demoMode) {
+      setSubmitting(true);
+      checkoutDemo();
       return;
     }
     // No internet at all → store on device, keep the counter running.

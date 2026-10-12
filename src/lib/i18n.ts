@@ -65,6 +65,7 @@ export const en = {
   },
   landing: {
     badge: "Restaurant POS made simple",
+    demoLive: "Live demo",
     heroTitle: "Kitchen POS Software for Restaurants & Cafés.",
     heroHighlight: "Sell faster. Know your numbers.",
     heroSubtitle:
@@ -732,6 +733,7 @@ export const ur: Dict = {
   },
   landing: {
     badge: "آسان ریسٹورنٹ POS سسٹم",
+    demoLive: "لائیو ڈیمو",
     heroTitle: "ریسٹورنٹ اور کیفے کے لیے کچن POS سسٹم۔",
     heroHighlight: "تیزی سے بیچیں۔ اپنے حساب کتاب کو جانیں۔",
     heroSubtitle:
@@ -1397,6 +1399,7 @@ export const ar: Dict = {
   },
   landing: {
     badge: "نظام نقاط بيع للمطاعم بكل بساطة",
+    demoLive: "نسخة تجريبية حيّة",
     heroTitle: "برنامج نقاط البيع (POS) للمطاعم والمقاهي.",
     heroHighlight: "بِع أسرع. اعرف أرقامك.",
     heroSubtitle:
