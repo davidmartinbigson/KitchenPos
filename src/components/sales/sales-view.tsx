@@ -33,7 +33,7 @@ type OrderRow = {
   items: { id: number; name: string; unitPrice: number; quantity: number; lineTotal: number; costPrice?: number; note?: string }[];
 };
 
-type CrmCustomer = { phone: string; name: string; visits: number; spent: number; lastAt: string };
+type CrmCustomer = { phone: string; name: string; visits: number; spent: number; lastAt: string; items: string };
 
 const PERIOD_DAYS = 30;
 
@@ -273,22 +273,56 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
 
   const topCustomers = useMemo<CrmCustomer[]>(() => {
     if (!crmOrders) return [];
-    const byPhone = new Map<string, CrmCustomer>();
+    const byPhone = new Map<string, CrmCustomer & { itemCount: Map<string, number> }>();
     for (const o of crmOrders) {
       if (o.voidedAt) continue;
       const phone = (o.customerPhone ?? "").replace(/[^\d+]/g, "");
       if (phone.length < 8) continue;
-      const cur = byPhone.get(phone) ?? { phone, name: o.customerName || phone, visits: 0, spent: 0, lastAt: o.createdAt };
+      const cur = byPhone.get(phone) ?? {
+        phone, name: o.customerName || phone, visits: 0, spent: 0, lastAt: o.createdAt, items: "", itemCount: new Map(),
+      };
       cur.visits += 1;
       cur.spent += o.total;
+      for (const it of o.items ?? []) {
+        if (it.name) cur.itemCount.set(it.name, (cur.itemCount.get(it.name) ?? 0) + it.quantity);
+      }
       if (o.createdAt > cur.lastAt) {
         cur.lastAt = o.createdAt;
         if (o.customerName) cur.name = o.customerName;
       }
       byPhone.set(phone, cur);
     }
-    return [...byPhone.values()].sort((a, b) => b.spent - a.spent).slice(0, 6);
+    return [...byPhone.values()]
+      .map(({ itemCount, ...rest }) => ({
+        ...rest,
+        items: [...itemCount.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([n, q]) => `${n} ${q > 1 ? `×${q}` : ""}`)
+          .join(", "),
+      }))
+      .sort((a, b) => b.spent - a.spent)
+      .slice(0, 20);
   }, [crmOrders]);
+
+  function exportLeadsCsv() {
+    const header = ["Name", "WhatsApp", "Visits", "TotalSpent", "LastVisit", "TopItems"];
+    const rows = topCustomers.map((c) => [
+      c.name.replace(/"/g, "'"),
+      c.phone,
+      String(c.visits),
+      String(c.spent),
+      new Date(c.lastAt).toISOString().slice(0, 10),
+      c.items.replace(/"/g, "'"),
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `customer-leads-${toLocalDateKey()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   const [expenses, setExpenses] = useState<ExpenseRow[] | null>(null);
   const [expForm, setExpForm] = useState({ title: "", amount: "" });
   const [expSaving, setExpSaving] = useState(false);
@@ -686,14 +720,21 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
           )}
         </Card>
 
-        {/* CRM-lite: best repeat customers by saved phone */}
+        {/* Leads book: repeat customers by saved WhatsApp number */}
         {addons.crm === true && (
           <Card className="p-6">
-            <div className="mb-4">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <Trophy className="h-5 w-5 text-amber-500" /> {S.crmTitle}
-              </h2>
-              <p className="text-sm text-slate-500">{S.crmDesc}</p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                  <Trophy className="h-5 w-5 text-amber-500" /> {S.crmTitle}
+                </h2>
+                <p className="text-sm text-slate-500">{S.crmDesc}</p>
+              </div>
+              {topCustomers.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={exportLeadsCsv} title={S.crmExportHint}>
+                  <Download className="h-4 w-4" /> {S.crmExport}
+                </Button>
+              )}
             </div>
             {!crmOrders ? (
               <div className="space-y-2.5">
@@ -704,7 +745,7 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
             ) : topCustomers.length === 0 ? (
               <p className="rounded-xl bg-slate-50 p-4 text-center text-xs font-semibold text-slate-500">{S.crmEmpty}</p>
             ) : (
-              <ul className="space-y-2.5">
+              <ul className="scroll-thin max-h-[20rem] space-y-2.5 overflow-y-auto pe-1">
                 {topCustomers.map((c, i) => (
                   <li key={c.phone} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-xs font-black text-white">
@@ -712,9 +753,15 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-slate-900">{c.name}</p>
+                      <p className="truncate font-mono text-[11px] font-semibold text-slate-600" dir="ltr">{c.phone}</p>
                       <p className="text-[11px] text-slate-500">
-                        {formatNumber(c.visits, lang)} {S.crmVisits} · {money(c.spent)} {S.crmSpent}
+                        {formatNumber(c.visits, lang)} {S.crmVisits} · {money(c.spent)} {S.crmSpent} · {S.crmLast}: {formatDate(c.lastAt, lang)}
                       </p>
+                      {c.items && (
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                          🍽️ {c.items}
+                        </p>
+                      )}
                     </div>
                     <a
                       href={`https://wa.me/${c.phone.replace(/^\+/, "")}?text=${encodeURIComponent(S.crmWaMsg)}`}

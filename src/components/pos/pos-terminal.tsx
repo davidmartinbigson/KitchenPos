@@ -662,6 +662,20 @@ export function PosTerminal({
                   placeholder={P.customerName}
                   maxLength={100}
                 />
+                {/* Add-on: customer WhatsApp — owner's lead record only; never printed. */}
+                {addOn("whatsappCustomer") && (
+                  <div className="relative">
+                    <MessageCircle className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
+                    <Input
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+                      placeholder={`${P.customerPhone} — 923001234567`}
+                      inputMode="tel"
+                      maxLength={20}
+                      className="ps-10"
+                    />
+                  </div>
+                )}
 
                 {/* Line items */}
                 <div className="scroll-thin max-h-72 min-h-[7rem] space-y-2.5 overflow-y-auto pe-1">
@@ -872,20 +886,6 @@ export function PosTerminal({
                         </button>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Add-on: customer WhatsApp */}
-                {addOn("whatsappCustomer") && (
-                  <div>
-                    <p className="text-xs font-bold text-slate-500">{P.customerPhone}</p>
-                    <Input
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9+]/g, ""))}
-                      placeholder="923001234567"
-                      inputMode="tel"
-                      className="mt-1"
-                    />
                   </div>
                 )}
 
