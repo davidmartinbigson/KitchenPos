@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { compressImage } from "@/lib/format";
+import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
 
 /* Guest menu is standalone (no app i18n): static EN + AR strings, toggled in-page.
    Item names always stay as the restaurant typed them. */
@@ -101,6 +102,7 @@ export function QrMenuClient({
   guestTracking = false,
   paymentProof = false,
   taxRate = 0,
+  demoMode = false,
 }: {
   restaurantId: number;
   shopName: string;
@@ -113,6 +115,8 @@ export function QrMenuClient({
   paymentProof?: boolean;
   /** Tax add-on: VAT % configured by the shop (0 = off). Server re-computes the final amount. */
   taxRate?: number;
+  /** Static on-device demo: orders are simulated locally, zero API traffic. */
+  demoMode?: boolean;
 }) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -185,6 +189,23 @@ export function QrMenuClient({
   async function placeOrder() {
     setPlacing(true);
     setError("");
+    if (demoMode) {
+      const orderNumber = nextDemoOrderNo();
+      recordDemoOrder({
+        orderNumber,
+        at: new Date().toISOString(),
+        customer: customerName.trim() || "Guest",
+        items: lines.map((l) => ({ name: l.displayName, qty: l.qty, lineTotal: l.unitPrice * l.qty })),
+        total,
+      });
+      setDone({ id: 1, orderNumber, total });
+      setCart({});
+      setNotes({});
+      setCartOpen(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setPlacing(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/public/order/${restaurantId}`, {
         method: "POST",

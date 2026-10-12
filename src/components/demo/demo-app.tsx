@@ -3,10 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { BarChart3, ChefHat, Lock, LogIn, Mail, MonitorPlay, RotateCcw, ShoppingCart, Sparkles } from "lucide-react";
+import { BarChart3, ChefHat, CheckCircle2, Flame, Layers, Lock, LogIn, Mail, MonitorPlay, QrCode, RotateCcw, ShoppingCart, Sparkles } from "lucide-react";
 import type { MenuItemDTO } from "@/lib/types";
 import { PosTerminal } from "@/components/pos/pos-terminal";
+import { QrMenuClient } from "@/components/qr-menu/qr-menu-client";
+import { DemoKitchen } from "@/components/demo/demo-kitchen";
 import { loadDemoOrders, resetDemoData } from "@/lib/demo";
+import { READY_ADDONS } from "@/lib/addons";
+import { useI18n } from "@/components/providers/language-provider";
 import { currencyForCountry, detectCountryFromLocale } from "@/lib/countries";
 import { formatMoney, formatTime } from "@/lib/format";
 
@@ -16,6 +20,8 @@ const DEMO_ITEMS: MenuItemDTO[] = [
   { id: 9002, name: "Margherita Pizza", category: "Mains", description: "Wood-fired classic", price: 899, imageData: null, emoji: "🍕", available: true, extras: [{ name: "Large", price: 300 }] },
   { id: 9003, name: "Loaded Fries", category: "Sides", description: "Sauce heaven", price: 299, imageData: null, emoji: "🍟", available: true },
   { id: 9004, name: "Cold Coffee", category: "Drinks", description: "Ice-blended", price: 250, imageData: null, emoji: "🥤", available: true },
+  { id: 9005, name: "Caesar Salad", category: "Sides", description: "Fresh & light", price: 399, imageData: null, emoji: "🥗", available: true },
+  { id: 9006, name: "Mango Shake", category: "Drinks", description: "Seasonal", price: 220, imageData: null, emoji: "🥭", available: true, stockQty: 0 },
 ];
 
 function useCurrency() {
@@ -136,11 +142,33 @@ function DemoSales({ currency }: { currency: string }) {
   );
 }
 
+function DemoAddons() {
+  const { t } = useI18n();
+  const list = t.settings.addonList as unknown as Record<string, { name: string; desc: string }>;
+  return (
+    <div>
+      <div className="mb-5 rounded-2xl bg-emerald-50 px-4 py-3 text-center text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+        ✅ All {READY_ADDONS.length} add-ons are switched ON in this demo — shop owners choose which ones they need in Settings.
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {READY_ADDONS.map((key) => (
+          <div key={key} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+            <p className="flex items-center gap-2 text-sm font-black text-slate-900">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" /> {list[key]?.name ?? key}
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{list[key]?.desc ?? ""}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------------------- the app ------------------------------------ */
 
 export function DemoApp() {
   const [stage, setStage] = useState<"login" | "app">("login");
-  const [tab, setTab] = useState<"pos" | "sales">("pos");
+  const [tab, setTab] = useState<"pos" | "qr" | "kitchen" | "sales" | "addons">("pos");
   const currency = useCurrency();
 
   if (stage === "login") return <DemoLogin onEnter={() => setStage("app")} />;
@@ -188,6 +216,22 @@ export function DemoApp() {
             <ShoppingCart className="h-3.5 w-3.5" /> Point of Sale
           </button>
           <button
+            onClick={() => setTab("qr")}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+              tab === "qr" ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200"
+            }`}
+          >
+            <QrCode className="h-3.5 w-3.5" /> QR menu
+          </button>
+          <button
+            onClick={() => setTab("kitchen")}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+              tab === "kitchen" ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200"
+            }`}
+          >
+            <Flame className="h-3.5 w-3.5" /> Kitchen screen
+          </button>
+          <button
             onClick={() => setTab("sales")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
               tab === "sales" ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200"
@@ -195,13 +239,36 @@ export function DemoApp() {
           >
             <BarChart3 className="h-3.5 w-3.5" /> Sales report
           </button>
+          <button
+            onClick={() => setTab("addons")}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+              tab === "addons" ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200"
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5" /> All add-ons
+          </button>
           <span className="ms-auto hidden items-center gap-1.5 text-[11px] font-semibold text-slate-400 sm:flex">
             <MonitorPlay className="h-3.5 w-3.5" /> Print works too — try a receipt!
           </span>
         </div>
       </header>
 
-      <main className={tab === "pos" ? "px-3 pt-4 sm:px-5" : "mx-auto max-w-4xl px-4 pt-6"}>
+      <main className={tab === "pos" ? "px-3 pt-4 sm:px-5" : tab === "qr" ? "p-0" : "mx-auto max-w-6xl px-3 pt-6 sm:px-4"}>
+        {tab === "kitchen" && <DemoKitchen />}
+        {tab === "addons" && <DemoAddons />}
+        {tab === "qr" && (
+          <QrMenuClient
+            restaurantId={0}
+            shopName="Demo Bistro"
+            currency={currency}
+            active
+            items={DEMO_ITEMS}
+            taxRate={5}
+            guestTracking={false}
+            paymentProof={false}
+            demoMode
+          />
+        )}
         {tab === "pos" ? (
           <PosTerminal
             initialItems={DEMO_ITEMS}
@@ -218,6 +285,8 @@ export function DemoApp() {
               whatsappCustomer: true,
               tax: true,
               receiptBrand: true,
+              stock: true,
+              modifiers: true,
             }}
             branding={{
               logo: "",
