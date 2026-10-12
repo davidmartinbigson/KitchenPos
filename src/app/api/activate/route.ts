@@ -73,6 +73,16 @@ export async function POST(request: Request) {
         .set({ accessExpiresAt: expires, suspended: false })
         .where(eq(users.id, user.id));
 
+      // Multi-branch: children share the main account's subscription window.
+      try {
+        await tx
+          .update(users)
+          .set({ accessExpiresAt: expires })
+          .where(eq(users.parentOwnerId, user.id));
+      } catch {
+        /* branch columns not migrated yet — safe to ignore */
+      }
+
       return { expires, plan: key.plan, durationDays: key.durationDays };
     });
 

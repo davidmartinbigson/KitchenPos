@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { OrderNotifier } from "@/components/orders/order-notifier";
+import { BranchSwitcher } from "@/components/branches/branch-switcher";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/components/ui";
@@ -52,6 +53,8 @@ export type ShellUser =
       shopName: string;
       daysLeft: number;
       accessExpiresAt: string | null;
+      /** Shop add-on flags (multi-branch picker appears when "branches" is on). */
+      addons?: Record<string, unknown>;
     }
   | { kind: "staff"; name: string; role: string; shopName: string };
 
@@ -144,6 +147,8 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
             <p className="text-xs font-medium text-slate-500">{t.appName}</p>
           </div>
         </Link>
+
+        {isOwner && "addons" in user && user.addons?.branches === true && <BranchSwitcher />}
 
         <NavLinks />
 
@@ -247,6 +252,11 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
                 </button>
               </div>
               <NavLinks onNavigate={() => setMobileOpen(false)} />
+              {isOwner && "addons" in user && user.addons?.branches === true && (
+                <div className="mt-4">
+                  <BranchSwitcher />
+                </div>
+              )}
               <button
                 onClick={logout}
                 className="mt-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-200"

@@ -10,6 +10,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/ui";
 import type { Lang } from "@/lib/i18n";
 import { ADDON_KEYS, READY_ADDONS } from "@/lib/addons";
+import { BranchesSettings } from "@/components/branches/branches-settings";
 import { COUNTRIES, currencyForCountry } from "@/lib/countries";
 
 const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
@@ -236,6 +237,8 @@ export function SettingsForm({
               </button>
             </div>
           </Card>
+
+          <BranchesSettings />
 
           <Card className="p-6 sm:p-8">
             <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">

@@ -8,6 +8,7 @@ import {
   serial,
   text,
   timestamp,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -33,6 +34,10 @@ export const users = pgTable("users", {
   accessExpiresAt: timestamp("access_expires_at", { withTimezone: true }),
   /** Max menu items this shop may list. Master admin can raise it per restaurant. */
   itemLimit: integer("item_limit").notNull().default(500),
+  /** Multi-branch add-on: how many child branches this owner may create (main account not counted). */
+  branchLimit: integer("branch_limit").notNull().default(1),
+  /** Multi-branch: points at the main owner account. Null = main account. Children share its subscription window. */
+  parentOwnerId: integer("parent_owner_id").references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
   /** Owner option: receipts number orders from 1 each day (daily receipt counter). */
   dailyOrderReset: boolean("daily_order_reset").notNull().default(false),
   /** Opt-in extra features (Settings → Add-ons). Everything off by default. */

@@ -13,6 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  *  - { action: "extend", days: 30 }     add days to the subscription
  *  - { action: "revokeAccess" }         clear the subscription entirely
  *  - { action: "setItemLimit", value }  raise/lower the menu item limit (default 500)
+ *  - { action: "extendBranches" }     allow one more child branch (multi-branch add-on)
  */
 export async function PATCH(request: Request, { params }: RouteContext) {
   const { user, response } = await requireAdmin();
@@ -70,6 +71,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       updates.itemLimit = value;
       break;
     }
+    case "extendBranches": {
+      const [row] = await db
+        .select({ branchLimit: users.branchLimit, parentOwnerId: users.parentOwnerId })
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1)
+        .catch(() => [null] as const);
+      if (!row) return jsonError("MIGRATION_PENDING", 409);
+      if (row.parentOwnerId != null) return jsonError("BRANCH_NOT_MAIN", 400);
+      const next = Math.min(50, (row.branchLimit ?? 1) + 1);
+      updates.branchLimit = next;
+      break;
+    }
     default:
       return jsonError("INVALID_ACTION", 400);
   }
@@ -85,7 +99,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       itemLimit: users.itemLimit,
     });
 
-  return NextResponse.json({ customer: updated });
+  // Subscription extends propagate to every branch of the family.
+  if (action === "extend" && updates.accessExpiresAt) {
+    try {
+      await db
+        .update(users)
+        .set({ accessExpiresAt: updates.accessExpiresAt })
+        .where(eq(users.parentOwnerId, id));
+    } catch {
+      /* branch columns not migrated yet */
+    }
+  }
+
+  return NextResponse.json({ customer: { ...updated, branchLimit: action === "extendBranches" ? updates.branchLimit : undefined } });
 }
 
 /** Permanently delete a customer and all of their data. */

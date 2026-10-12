@@ -42,6 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         shopName: user.shopName,
         daysLeft: daysLeft(user.accessExpiresAt),
         accessExpiresAt: user.accessExpiresAt ? user.accessExpiresAt.toISOString() : null,
+        addons: user.addons as Record<string, unknown>,
       }}
     >
       {children}

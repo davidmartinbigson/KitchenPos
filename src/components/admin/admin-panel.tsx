@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   BadgeCheck,
   Ban,
+  Building2,
   Copy,
   CalendarPlus,
   Crown,
@@ -30,6 +31,8 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, Select, Skeleton, cn } from "@/components/ui";
 import { formatDate, formatNumber } from "@/lib/format";
 
+type BranchCard = { id: number; shopName: string; suspended: boolean; online: boolean; createdAt: string };
+
 type Customer = {
   id: number;
   name: string;
@@ -43,6 +46,10 @@ type Customer = {
   lastSeenAt: string | null;
   online: boolean;
   createdAt: string;
+  /** Multi-branch: how many branches this owner may open (master-set). */
+  branchLimit: number;
+  /** Branch stores attached to this account (identity/status only). */
+  children: BranchCard[];
 };
 
 type Summary = { customers: number; active: number; online: number; offline: number; orders: number };
@@ -449,8 +456,52 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                                 <ListPlus className="h-3.5 w-3.5" />
                                 {A.itemLimit}: {formatNumber(c.itemLimit, lang)}
                               </button>
+                              <button
+                                onClick={() => customerAction(c.id, { action: "extendBranches" })}
+                                disabled={busyId === c.id}
+                                className="flex items-center gap-2 rounded-full bg-fuchsia-50 px-3.5 py-1.5 text-xs font-black text-fuchsia-700 ring-1 ring-fuchsia-200 transition hover:bg-fuchsia-100 disabled:opacity-40"
+                                title={A.branchLimitTitle}
+                              >
+                                <Building2 className="h-3.5 w-3.5" />
+                                {A.branchesLabel}: {formatNumber((c.children ?? []).length, lang)}/{formatNumber(c.branchLimit ?? 1, lang)} ➕
+                              </button>
                             </div>
                           </div>
+
+                          {c.children && c.children.length > 0 && (
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">{A.branchListTitle}:</span>
+                              {c.children.map((b) => (
+                                <span
+                                  key={b.id}
+                                  className={cn(
+                                    "flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ring-1",
+                                    b.suspended ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-slate-50 text-slate-700 ring-slate-200",
+                                  )}
+                                >
+                                  🏬 {b.shopName}
+                                  {b.online && !b.suspended && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                                  {b.suspended ? (
+                                    <button
+                                      onClick={() => customerAction(b.id, { action: "resume" })}
+                                      disabled={busyId === b.id}
+                                      className="ms-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black text-white disabled:opacity-40"
+                                    >
+                                      {A.resume}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => customerAction(b.id, { action: "suspend" })}
+                                      disabled={busyId === b.id}
+                                      className="ms-1 rounded bg-rose-600 px-1.5 py-0.5 text-[9px] font-black text-white disabled:opacity-40"
+                                    >
+                                      {A.suspend}
+                                    </button>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
                           <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
                             <Button
