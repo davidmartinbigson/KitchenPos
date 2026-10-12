@@ -23,6 +23,7 @@ export const ADDON_KEYS = [
   "googleReview",
   "crm",
   "branches",
+  "fullCashier",
 ] as const;
 
 export type AddonKey = (typeof ADDON_KEYS)[number];
@@ -47,6 +48,7 @@ export const READY_ADDONS: AddonKey[] = [
   "googleReview",
   "crm",
   "branches",
+  "fullCashier",
 ];
 
 export const ORDER_PAYMENT_METHODS = ["cash", "card", "jazzcash", "easypaisa", "bank"] as const;

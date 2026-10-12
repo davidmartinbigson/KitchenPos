@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           name: member.name,
           role: member.role,
           shopName: session.owner.shopName,
+          addons: session.owner.addons as Record<string, unknown>,
         }}
       >
         {children}

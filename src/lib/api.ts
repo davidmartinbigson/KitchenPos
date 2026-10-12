@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, getSession, type AppSession } from "@/lib/auth";
+import { getCurrentUser, getSession, hasFullCashierAccess, type AppSession } from "@/lib/auth";
 import { hasActiveAccess, isAdmin } from "@/lib/access";
 
 export function jsonError(code: string, status = 400) {
@@ -86,6 +86,11 @@ export async function requireApp(roles?: AppRole[]): Promise<GuardResult> {
 
   const staffRole: AppRole = session.staff.role === "chef" ? "chef" : "cashier";
   if (!session.ownerActive) return fail("OWNER_INACTIVE", 403);
+  // Full-control cashier add-on: this cashier drives owner-level APIs too.
+  if (hasFullCashierAccess(session)) {
+    if (roles && !roles.includes("owner")) return fail("FORBIDDEN", 403);
+    return { ok: true, session, ownerId: session.staff.ownerId, role: "owner" };
+  }
   if (roles && !roles.includes(staffRole)) return fail("FORBIDDEN", 403);
   return { ok: true, session, ownerId: session.staff.ownerId, role: staffRole };
 }

@@ -78,14 +78,7 @@ export const sessionCookieOptions = {
   secure: process.env.COOKIE_SECURE === "true",
 };
 
-export async function getCurrentUser() {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  const session = readSessionToken(token);
-  if (!session || !session.uid) return null;
-  const [user] = await db
-    .select({
+const CURRENT_USER_COLS = {
       id: users.id,
       name: users.name,
       email: users.email,
@@ -111,11 +104,21 @@ export async function getCurrentUser() {
       taxRate: users.taxRate,
       googleReviewUrl: users.googleReviewUrl,
       lastSeenAt: users.lastSeenAt,
-    })
-    .from(users)
-    .where(eq(users.id, session.uid))
-    .limit(1);
+    };
+
+/** Fetches the full owner row - also used by the full-control cashier emulation. */
+export async function fetchUserById(uid: number) {
+  const [user] = await db.select(CURRENT_USER_COLS).from(users).where(eq(users.id, uid)).limit(1);
   return user ?? null;
+}
+
+export async function getCurrentUser() {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const session = readSessionToken(token);
+  if (!session || !session.uid) return null;
+  return fetchUserById(session.uid);
 }
 
 export type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
@@ -136,7 +139,20 @@ export type OwnerContext = {
   suspended: boolean;
   accessExpiresAt: Date | null;
   role: string;
+  /** Shop add-on flags (drives full-control cashier + branch picker visibility for staff). */
+  addons: unknown;
 };
+
+/**
+ * "Full-control cashier" add-on: this cashier operates the shop like the owner
+ * (every page & API), EXCEPT the Live view which stays owner-only by design.
+ */
+export function hasFullCashierAccess(session: AppSession): boolean {
+  if (session.type !== "staff") return false;
+  if (session.staff.role !== "cashier") return false;
+  const addons = session.owner.addons as Record<string, unknown> | null | undefined;
+  return addons?.fullCashier === true;
+}
 
 export type AppSession =
   | { type: "owner"; user: CurrentUser }

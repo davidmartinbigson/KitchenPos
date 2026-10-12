@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq, ne } from "drizzle-orm";
-import { db } from "@/db";
+import { db, pool } from "@/db";
 import { users } from "@/db/schema";
 import { jsonError, parseId, requireAdmin } from "@/lib/api";
 
@@ -71,7 +71,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       updates.itemLimit = value;
       break;
     }
-    case "extendBranches": {
+    case "extendBranches":
+    case "setBranchLimit": {
       const [row] = await db
         .select({ branchLimit: users.branchLimit, parentOwnerId: users.parentOwnerId })
         .from(users)
@@ -80,7 +81,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         .catch(() => [null] as const);
       if (!row) return jsonError("MIGRATION_PENDING", 409);
       if (row.parentOwnerId != null) return jsonError("BRANCH_NOT_MAIN", 400);
-      const next = Math.min(50, (row.branchLimit ?? 1) + 1);
+      let next: number;
+      if (action === "extendBranches") {
+        next = Math.min(50, (row.branchLimit ?? 1) + 1);
+      } else {
+        const value = Math.round(Number(body.value));
+        if (!Number.isFinite(value) || value < 0 || value > 50) return jsonError("INVALID_LIMIT", 400);
+        const { count: used } =
+          (await pool.query<{ count: number }>(
+            'SELECT count(*)::int AS count FROM users WHERE parent_owner_id = $1',
+            [id],
+          ).then((r) => r.rows[0])) ?? { count: 0 };
+        if (value < used) return jsonError("BELOW_USED", 400);
+        next = value;
+      }
       updates.branchLimit = next;
       break;
     }

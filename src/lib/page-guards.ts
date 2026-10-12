@@ -1,16 +1,28 @@
 import { redirect } from "next/navigation";
-import { getSession, type OwnerContext, type StaffSessionRow } from "@/lib/auth";
+import { fetchUserById, getSession, hasFullCashierAccess, type OwnerContext, type StaffSessionRow } from "@/lib/auth";
 import type { CurrentUser } from "@/lib/auth";
 
 export function staffHome(role: string) {
   return role === "chef" ? "/kitchen" : "/pos";
 }
 
-/** Only shop accounts (owner). Staff is bounced to their own home screen. */
-export async function requireOwnerPage(): Promise<CurrentUser> {
+/**
+ * Shop account pages. With the full-control-cashier add-on ON, a cashier
+ * emulates the owner everywhere. ` ownerOnly: true ` keeps a page strict
+ * (the Live view always stays owner-only).
+ */
+export async function requireOwnerPage(opts?: { ownerOnly?: boolean }): Promise<CurrentUser> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.type === "staff") redirect(staffHome(session.staff.role));
+  if (session.type === "staff") {
+    if (opts?.ownerOnly || !hasFullCashierAccess(session)) {
+      redirect(staffHome(session.staff.role));
+    }
+    if (!session.ownerActive) redirect("/login");
+    const ownerUser = await fetchUserById(session.staff.ownerId);
+    if (!ownerUser) redirect("/login");
+    return ownerUser;
+  }
   return session.user;
 }
 
@@ -71,13 +83,24 @@ export async function requireKitchenScope(): Promise<KitchenScope> {
 
   if (session.type === "staff") {
     const member = session.staff;
-    if (member.role !== "chef") redirect("/pos");
+    const elevated = hasFullCashierAccess(session);
+    if (member.role !== "chef" && !elevated) redirect("/pos");
     if (!session.ownerActive) redirect("/login");
+    if (member.role === "chef") {
+      return {
+        ownerId: member.ownerId,
+        viewerRole: "chef",
+        viewerName: member.name,
+        categories: member.categories,
+        shopName: session.owner.shopName,
+      };
+    }
+    // Full-control cashier supervises the kitchen like the owner.
     return {
       ownerId: member.ownerId,
-      viewerRole: "chef",
+      viewerRole: "owner",
       viewerName: member.name,
-      categories: member.categories,
+      categories: [],
       shopName: session.owner.shopName,
     };
   }

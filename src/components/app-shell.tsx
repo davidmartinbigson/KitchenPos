@@ -56,7 +56,14 @@ export type ShellUser =
       /** Shop add-on flags (multi-branch picker appears when "branches" is on). */
       addons?: Record<string, unknown>;
     }
-  | { kind: "staff"; name: string; role: string; shopName: string };
+  | {
+      kind: "staff";
+      name: string;
+      role: string;
+      shopName: string;
+      /** Owner's add-on flags: fullCashier unlocks the owner nav (minus Live). */
+      addons?: Record<string, unknown>;
+    };
 
 const ownerNav = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
@@ -71,6 +78,11 @@ const ownerNav = [
 
 const cashierNav = [{ href: "/pos", key: "pos", icon: ShoppingBasket }] as const;
 
+/** Full-control cashier: everything except the owner-only Live view. */
+const cashierFullNav = ownerNav.filter((i) => i.key !== "live");
+/** Mobile bar: swap Live for Sales so nothing interactive is lost. */
+const cashierFullMobileNav = [ownerNav[0], ownerNav[2], ownerNav[3], ownerNav[4], ownerNav[5]];
+
 const mobileOwnerNav = ownerNav.slice(0, 5);
 
 export function AppShell({ user, children }: { user: ShellUser; children: ReactNode }) {
@@ -81,8 +93,10 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
   useHeartbeat();
 
   const isOwner = user.kind === "owner";
-  const navItems = isOwner ? ownerNav : cashierNav;
-  const mobileItems = isOwner ? mobileOwnerNav : cashierNav;
+  const fullCashier =
+    !isOwner && (user as { addons?: Record<string, unknown> }).addons?.fullCashier === true;
+  const navItems = isOwner ? ownerNav : fullCashier ? cashierFullNav : cashierNav;
+  const mobileItems = isOwner ? mobileOwnerNav : fullCashier ? cashierFullMobileNav : cashierNav;
 
   // Lazy daily-summary trigger: once per day per device, when the owner opens the app
   // in the evening (server validates the time window + sends only for this owner).

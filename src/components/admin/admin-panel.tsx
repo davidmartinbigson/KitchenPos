@@ -456,15 +456,26 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                                 <ListPlus className="h-3.5 w-3.5" />
                                 {A.itemLimit}: {formatNumber(c.itemLimit, lang)}
                               </button>
-                              <button
-                                onClick={() => customerAction(c.id, { action: "extendBranches" })}
-                                disabled={busyId === c.id}
-                                className="flex items-center gap-2 rounded-full bg-fuchsia-50 px-3.5 py-1.5 text-xs font-black text-fuchsia-700 ring-1 ring-fuchsia-200 transition hover:bg-fuchsia-100 disabled:opacity-40"
-                                title={A.branchLimitTitle}
-                              >
+                              <span className="flex items-center gap-1.5 rounded-full bg-fuchsia-50 px-2 py-1.5 text-xs font-black text-fuchsia-700 ring-1 ring-fuchsia-200">
                                 <Building2 className="h-3.5 w-3.5" />
-                                {A.branchesLabel}: {formatNumber((c.children ?? []).length, lang)}/{formatNumber(c.branchLimit ?? 1, lang)} ➕
-                              </button>
+                                {A.branchesLabel}: {formatNumber((c.children ?? []).length, lang)}/{formatNumber(c.branchLimit ?? 1, lang)}
+                                <button
+                                  onClick={() => customerAction(c.id, { action: "setBranchLimit", value: (c.branchLimit ?? 1) - 1 })}
+                                  disabled={busyId === c.id || (c.branchLimit ?? 1) <= (c.children ?? []).length}
+                                  className="ms-0.5 grid h-5 w-5 place-items-center rounded-full bg-white text-fuchsia-700 ring-1 ring-fuchsia-200 transition hover:bg-fuchsia-100 disabled:opacity-30"
+                                  title={A.branchLimitMinus}
+                                >
+                                  −
+                                </button>
+                                <button
+                                  onClick={() => customerAction(c.id, { action: "setBranchLimit", value: (c.branchLimit ?? 1) + 1 })}
+                                  disabled={busyId === c.id}
+                                  className="grid h-5 w-5 place-items-center rounded-full bg-fuchsia-600 text-white transition hover:bg-fuchsia-700 disabled:opacity-30"
+                                  title={A.branchLimitPlus}
+                                >
+                                  +
+                                </button>
+                              </span>
                             </div>
                           </div>
 
