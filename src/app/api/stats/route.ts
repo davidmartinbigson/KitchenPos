@@ -17,8 +17,8 @@ function utcKey(d: Date) {
  * today = client's local date (YYYY-MM-DD) so "today" matches the user's clock.
  */
 export async function GET(request: Request) {
-  // Owner and (full-control) cashiers read the same shop stats via ownerId.
-  const guard = await requireApp(["owner", "cashier"]);
+  // Owner-only stats. Full-control cashiers are elevated to the owner role by requireApp.
+  const guard = await requireApp(["owner"]);
   if (!guard.ok) return guard.response;
   const ownerId = guard.ownerId;
 

@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems } from "@/db/schema";
-import { requireActiveUser } from "@/lib/api";
+import { requireApp } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,11 +16,12 @@ function csvCell(value: unknown): string {
  * so a file can be edited in Excel and imported back.
  */
 export async function GET() {
-  const { user, response } = await requireActiveUser();
-  if (!user) return response;
+  const guard = await requireApp(["owner"]);
+  if (!guard.ok) return guard.response;
+  const ownerId = guard.ownerId;
 
   const rows = await db.query.menuItems.findMany({
-    where: eq(menuItems.userId, user.id),
+    where: eq(menuItems.userId, ownerId),
     orderBy: [asc(menuItems.category), asc(menuItems.name)],
     limit: 5000,
   });

@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems } from "@/db/schema";
-import { jsonError, parseId, requireActiveUser } from "@/lib/api";
+import { jsonError, parseId, requireApp } from "@/lib/api";
 
 const MAX_IMAGE_LENGTH = 900_000;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const { user, response } = await requireActiveUser();
-  if (!user) return response;
+  const guard = await requireApp(["owner"]);
+  if (!guard.ok) return guard.response;
+  const ownerId = guard.ownerId;
 
   const id = parseId((await params).id);
   if (!id) return jsonError("NOT_FOUND", 404);
@@ -82,7 +83,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const [item] = await db
     .update(menuItems)
     .set(updates)
-    .where(and(eq(menuItems.id, id), eq(menuItems.userId, user.id)))
+    .where(and(eq(menuItems.id, id), eq(menuItems.userId, ownerId)))
     .returning();
 
   if (!item) return jsonError("NOT_FOUND", 404);
@@ -90,15 +91,16 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteContext) {
-  const { user, response } = await requireActiveUser();
-  if (!user) return response;
+  const guard = await requireApp(["owner"]);
+  if (!guard.ok) return guard.response;
+  const ownerId = guard.ownerId;
 
   const id = parseId((await params).id);
   if (!id) return jsonError("NOT_FOUND", 404);
 
   const deleted = await db
     .delete(menuItems)
-    .where(and(eq(menuItems.id, id), eq(menuItems.userId, user.id)))
+    .where(and(eq(menuItems.id, id), eq(menuItems.userId, ownerId)))
     .returning({ id: menuItems.id });
 
   if (deleted.length === 0) return jsonError("NOT_FOUND", 404);

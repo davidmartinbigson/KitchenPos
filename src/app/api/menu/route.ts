@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { menuItems } from "@/db/schema";
-import { jsonError, requireActiveUser, requireApp } from "@/lib/api";
+import { menuItems, users } from "@/db/schema";
+import { jsonError, requireApp } from "@/lib/api";
 
 const MAX_IMAGE_LENGTH = 900_000; // ~650KB base64 JPEG
 
@@ -22,8 +22,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { user, response } = await requireActiveUser();
-  if (!user) return response;
+  const guard = await requireApp(["owner"]);
+  if (!guard.ok) return guard.response;
+  const ownerId = guard.ownerId;
 
   let body: Record<string, unknown>;
   try {
@@ -45,15 +46,21 @@ export async function POST(request: Request) {
   const [{ total }] = await db
     .select({ total: count(menuItems.id).mapWith(Number) })
     .from(menuItems)
-    .where(eq(menuItems.userId, user.id));
-  if (total >= user.itemLimit) {
-    return NextResponse.json({ error: "ITEM_LIMIT", limit: user.itemLimit }, { status: 403 });
+    .where(eq(menuItems.userId, ownerId));
+  const [ownerRow] = await db
+    .select({ itemLimit: users.itemLimit })
+    .from(users)
+    .where(eq(users.id, ownerId))
+    .limit(1);
+  const itemLimit = ownerRow?.itemLimit ?? 500;
+  if (total >= itemLimit) {
+    return NextResponse.json({ error: "ITEM_LIMIT", limit: itemLimit }, { status: 403 });
   }
 
   const [item] = await db
     .insert(menuItems)
     .values({
-      userId: user.id,
+      userId: ownerId,
       name: name.slice(0, 120),
       category: String(body.category ?? "").trim().slice(0, 60) || "General",
       description: String(body.description ?? "").trim().slice(0, 400),

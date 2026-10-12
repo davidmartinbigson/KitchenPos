@@ -2,22 +2,23 @@ import { NextResponse } from "next/server";
 import { and, count, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders, users } from "@/db/schema";
-import { jsonError, requireActiveUser, requireApp } from "@/lib/api";
+import { jsonError, requireApp } from "@/lib/api";
 import { addonEnabled } from "@/lib/addons";
 import { matchPaymentMethod } from "@/lib/payment-methods";
 
 type IncomingLine = { menuItemId: unknown; quantity: unknown };
 
 export async function GET(request: Request) {
-  const { user, response } = await requireActiveUser();
-  if (!user) return response;
+  const guard = await requireApp(["owner"]);
+  if (!guard.ok) return guard.response;
+  const { ownerId } = guard;
 
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 200) || 200, 1000);
 
-  const conditions = [eq(orders.userId, user.id)];
+  const conditions = [eq(orders.userId, ownerId)];
   if (from && !Number.isNaN(Date.parse(from))) conditions.push(gte(orders.createdAt, new Date(from)));
   if (to && !Number.isNaN(Date.parse(to))) conditions.push(lt(orders.createdAt, new Date(to)));
 
