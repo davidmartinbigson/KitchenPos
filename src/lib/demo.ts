@@ -72,15 +72,23 @@ function seedOrders(): DemoOrder[] {
     { name: "Cold Coffee", price: 250 },
   ];
   const orders: DemoOrder[] = [];
-  let no = 1028;
-  for (let i = 0; i < 14; i++) {
+  let no = 1002;
+  // 26 believable orders spread across the last 7 days (heavier recently)
+  // so the dashboard + 7-day sales chart look alive on first visit.
+  for (let i = 0; i < 26; i++) {
+    const daysAgo = i < 8 ? 0 : i < 12 ? 1 : i < 15 ? 2 : i < 17 ? 3 : i < 19 ? 4 : i < 21 ? 5 : 6;
+    const day = new Date();
+    day.setDate(day.getDate() - daysAgo);
+    // Business hours look: 11:00–22:30, spread within the day by index
+    day.setHours(11 + ((i * 37) % 12), (i * 53) % 60, 0, 0);
+    if (daysAgo === 0 && day.getTime() > Date.now()) day.setHours(Math.max(9, new Date().getHours() - 1));
     const itemA = dishes[i % dishes.length];
     const itemB = dishes[(i + 2) % dishes.length];
     const qtyA = 1 + (i % 2);
     const total = itemA.price * qtyA + (i % 3 === 0 ? itemB.price : 0);
     orders.push({
       orderNumber: no++,
-      at: new Date(Date.now() - i * 47 * 60_000).toISOString(),
+      at: day.toISOString(),
       customer: names[i % names.length],
       items:
         i % 3 === 0
@@ -92,5 +100,5 @@ function seedOrders(): DemoOrder[] {
       total,
     });
   }
-  return orders.reverse();
+  return orders.sort((a, b) => +new Date(b.at) - +new Date(a.at));
 }
