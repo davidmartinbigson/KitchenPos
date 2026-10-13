@@ -48,6 +48,10 @@ type Customer = {
   createdAt: string;
   /** Multi-branch: how many branches this owner may open (master-set). */
   branchLimit: number;
+  /** Staff quota: how many cashier/chef logins (master-set, default 3). */
+  staffLimit: number;
+  /** Current staff accounts in use. */
+  staffUsed: number;
   /** Branch stores attached to this account (identity/status only). */
   children: BranchCard[];
 };
@@ -472,6 +476,26 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                                   disabled={busyId === c.id}
                                   className="grid h-5 w-5 place-items-center rounded-full bg-fuchsia-600 text-white transition hover:bg-fuchsia-700 disabled:opacity-30"
                                   title={A.branchLimitPlus}
+                                >
+                                  +
+                                </button>
+                              </span>
+                              <span className="flex items-center gap-1.5 rounded-full bg-sky-50 px-2 py-1.5 text-xs font-black text-sky-700 ring-1 ring-sky-200">
+                                <Users className="h-3.5 w-3.5" />
+                                {A.staffLabel}: {formatNumber(c.staffUsed ?? 0, lang)}/{formatNumber(c.staffLimit ?? 3, lang)}
+                                <button
+                                  onClick={() => customerAction(c.id, { action: "setStaffLimit", value: (c.staffLimit ?? 3) - 1 })}
+                                  disabled={busyId === c.id || (c.staffLimit ?? 3) <= (c.staffUsed ?? 0)}
+                                  className="ms-0.5 grid h-5 w-5 place-items-center rounded-full bg-white text-sky-700 ring-1 ring-sky-200 transition hover:bg-sky-100 disabled:opacity-30"
+                                  title={A.staffLimitMinus}
+                                >
+                                  −
+                                </button>
+                                <button
+                                  onClick={() => customerAction(c.id, { action: "setStaffLimit", value: (c.staffLimit ?? 3) + 1 })}
+                                  disabled={busyId === c.id}
+                                  className="grid h-5 w-5 place-items-center rounded-full bg-sky-600 text-white transition hover:bg-sky-700 disabled:opacity-30"
+                                  title={A.staffLimitPlus}
                                 >
                                   +
                                 </button>

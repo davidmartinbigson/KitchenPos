@@ -38,6 +38,8 @@ export const users = pgTable("users", {
   branchLimit: integer("branch_limit").notNull().default(1),
   /** Multi-branch: points at the main owner account. Null = main account. Children share its subscription window. */
   parentOwnerId: integer("parent_owner_id").references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+  /** Staff quota: how many cashier/chef logins this shop may create (master admin adjusts). */
+  staffLimit: integer("staff_limit").notNull().default(3),
   /** Owner option: receipts number orders from 1 each day (daily receipt counter). */
   dailyOrderReset: boolean("daily_order_reset").notNull().default(false),
   /** Opt-in extra features (Settings → Add-ons). Everything off by default. */

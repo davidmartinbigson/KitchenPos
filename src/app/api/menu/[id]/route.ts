@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { menuItems } from "@/db/schema";
 import { jsonError, parseId, requireApp } from "@/lib/api";
 
-const MAX_IMAGE_LENGTH = 900_000;
+const MAX_IMAGE_LENGTH = 690_000; // ~500KB image as base64 data URL
 
 type RouteContext = { params: Promise<{ id: string }> };
 

@@ -71,6 +71,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       updates.itemLimit = value;
       break;
     }
+    case "setStaffLimit": {
+      const value = Math.round(Number(body.value));
+      if (!Number.isFinite(value) || value < 0 || value > 50) return jsonError("INVALID_LIMIT", 400);
+      const { ensureStaffLimitColumn } = await import("@/lib/quota");
+      await ensureStaffLimitColumn();
+      const { rows: cnt } = await pool.query<{ cnt: number }>(
+        'SELECT count(*)::int AS cnt FROM staff WHERE owner_id = $1',
+        [id],
+      );
+      if (value < (cnt[0]?.cnt ?? 0)) return jsonError("BELOW_USED", 400);
+      updates.staffLimit = value;
+      break;
+    }
     case "extendBranches":
     case "setBranchLimit": {
       const [row] = await db

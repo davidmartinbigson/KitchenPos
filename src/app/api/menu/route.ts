@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { menuItems, users } from "@/db/schema";
 import { jsonError, requireApp } from "@/lib/api";
 
-const MAX_IMAGE_LENGTH = 900_000; // ~650KB base64 JPEG
+const MAX_IMAGE_LENGTH = 690_000; // data-URL chars for a ~500KB image (500*1024*4/3 + header)
 
 export async function GET() {
   // Cashiers read the menu for the POS screen; chefs use the kitchen feed.

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { staff, users } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { jsonError, requireActiveUser } from "@/lib/api";
+import { staffQuotaOf } from "@/lib/quota";
 
 const MAX_STAFF_PER_OWNER = 50;
 export const STAFF_ROLES = ["chef", "cashier"] as const;
@@ -58,11 +59,12 @@ export async function POST(request: Request) {
     return jsonError("INVALID_ROLE", 400);
   }
 
-  const [countRow] = await db
-    .select({ count: db.$count(staff, eq(staff.ownerId, user.id)) })
-    .from(staff)
-    .where(eq(staff.ownerId, user.id));
-  if ((countRow?.count ?? 0) >= MAX_STAFF_PER_OWNER) return jsonError("STAFF_LIMIT", 400);
+  // Per-shop staff quota (default 3, master admin adjustable) with the global hard ceiling.
+  const quota = await staffQuotaOf(user.id);
+  const effectiveLimit = Math.min(MAX_STAFF_PER_OWNER, quota.limit);
+  if (quota.used >= effectiveLimit) {
+    return NextResponse.json({ error: "STAFF_LIMIT", limit: effectiveLimit }, { status: 403 });
+  }
 
   const [takenUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   const [takenStaff] = await db.select({ id: staff.id }).from(staff).where(eq(staff.email, email)).limit(1);

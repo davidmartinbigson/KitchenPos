@@ -5,6 +5,7 @@ import { orders, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/api";
 import { isOnline } from "@/lib/presence";
 import { ensureBranchSchema, type BranchRow } from "@/lib/branches";
+import { ensureStaffLimitColumn } from "@/lib/quota";
 
 /**
  * All shop owners with their subscription state and LIVE presence.
@@ -69,12 +70,30 @@ export async function GET() {
     /* branch columns not migrated yet → plain customer list, same as before */
   }
 
+  const staffLimitById = new Map<number, number>();
+  const staffUsedByOwner = new Map<number, number>();
+  try {
+    await ensureStaffLimitColumn();
+    const { rows: lims } = await pool.query<{ id: number; staffLimit: number }>(
+      'SELECT id, staff_limit AS "staffLimit" FROM users WHERE role != \'admin\'',
+    );
+    for (const l of lims) staffLimitById.set(l.id, l.staffLimit);
+    const { rows: cnt } = await pool.query<{ ownerId: number; used: number }>(
+      'SELECT owner_id AS "ownerId", count(*)::int AS used FROM staff GROUP BY owner_id',
+    );
+    for (const c of cnt) staffUsedByOwner.set(c.ownerId, c.used);
+  } catch {
+    /* staff_limit column not migrated yet */
+  }
+
   const customers = rows
     .filter((r) => !childIds.has(r.id))
     .map((r) => ({
       ...r,
       online: isOnline(r.lastSeenAt),
       branchLimit: branchLimitById.get(r.id) ?? 1,
+      staffLimit: staffLimitById.get(r.id) ?? 3,
+      staffUsed: staffUsedByOwner.get(r.id) ?? 0,
       children: childrenByParent.get(r.id) ?? [],
     }));
 

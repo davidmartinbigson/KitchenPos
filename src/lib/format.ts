@@ -41,7 +41,12 @@ export function toLocalDateKey(value: string | Date = new Date()) {
 }
 
 /** Compress an uploaded image into a small JPEG data URL for storage. */
-export function compressImage(file: File, maxSize = 480, quality = 0.82): Promise<string> {
+/**
+ * Resize + re-encode an image for storage. Never returns more than
+ * `maxDataChars` characters of data URL (~500KB by default) — quality is
+ * stepped down automatically until it fits or we give up.
+ */
+export function compressImage(file: File, maxSize = 480, quality = 0.82, maxDataChars = 690_000): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/")) {
       reject(new Error("Not an image"));
@@ -67,7 +72,17 @@ export function compressImage(file: File, maxSize = 480, quality = 0.82): Promis
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        let q = quality;
+        let out = canvas.toDataURL("image/jpeg", q);
+        while (out.length > maxDataChars && q > 0.35) {
+          q -= 0.12;
+          out = canvas.toDataURL("image/jpeg", q);
+        }
+        if (out.length > maxDataChars) {
+          reject(new Error("Image larger than 500KB"));
+          return;
+        }
+        resolve(out);
       };
       img.src = reader.result as string;
     };
