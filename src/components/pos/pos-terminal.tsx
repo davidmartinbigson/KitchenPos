@@ -29,6 +29,7 @@ import { Button, Card, EmptyState, Input, Modal, cn, errorText } from "@/compone
 import { formatDate, formatMoney, formatNumber, formatTime } from "@/lib/format";
 import { enqueueOrder, loadQueue, removeFromQueue, saveQueue, type QueuedOrder } from "@/lib/offline-queue";
 import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
+import { thankYouMessage, waNumber } from "@/lib/whatsapp";
 import type { MenuItemDTO } from "@/lib/types";
 
 type ReceiptData = {
@@ -82,6 +83,8 @@ export function PosTerminal({
   taxRate = 0,
   paymentMethods = [],
   demoMode = false,
+  menuUrl = "",
+  country = "",
 }: {
   initialItems: MenuItemDTO[];
   currency: string;
@@ -96,6 +99,10 @@ export function PosTerminal({
   paymentMethods?: string[];
   /** Static on-device demo: checkout simulates locally, zero API traffic. */
   demoMode?: boolean;
+  /** Shop's public menu URL for the thank-you WhatsApp ("/menu/<slug>" or "/r/<id>"). */
+  menuUrl?: string;
+  /** Shop's ISO country — normalizes locally-typed WhatsApp numbers to wa.me format. */
+  country?: string;
 }) {
   const addOn = (key: string) => addons[key] === true;
   const { t, lang } = useI18n();
@@ -1013,14 +1020,19 @@ export function PosTerminal({
             <Button variant="secondary" className="flex-1" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> {P.print}
             </Button>
-            {receipt?.customerPhone && (
+            {receipt?.customerPhone && !demoMode && (
               <Button
                 variant="secondary"
                 className="flex-1"
                 onClick={() =>
                   window.open(
-                    `https://wa.me/${String(receipt.customerPhone).replace(/\D/g, "")}?text=${encodeURIComponent(
-                      `${receipt.shopName} — ${P.waReady} (${receipt.orderNumber} · ${money(receipt.total)})`,
+                    `https://wa.me/${waNumber(receipt.customerPhone ?? "", country)}?text=${encodeURIComponent(
+                      thankYouMessage({
+                        shop: receipt.shopName,
+                        orderNumber: receipt.orderNumber,
+                        total: money(receipt.total),
+                        menuLink: menuUrl ? `${window.location.origin}${menuUrl}` : "",
+                      }),
                     )}`,
                     "_blank",
                   )

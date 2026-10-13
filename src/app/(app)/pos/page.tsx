@@ -21,6 +21,8 @@ export default async function PosPage() {
       receiptFooter: users.receiptFooter,
       receiptLogo: users.receiptLogo,
       receiptSize: users.receiptSize,
+      slug: users.slug,
+      country: users.country,
     })
     .from(users)
     .where(eq(users.id, scope.ownerId));
@@ -59,6 +61,8 @@ export default async function PosPage() {
         footer: ownerRow?.receiptFooter ?? "",
         size: ownerRow?.receiptSize ?? "80",
       }}
+      menuUrl={ownerRow?.slug ? `/menu/${ownerRow.slug}` : `/r/${scope.ownerId}`}
+      country={ownerRow?.country ?? ""}
     />
   );
 }
