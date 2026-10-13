@@ -720,9 +720,11 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
           )}
         </Card>
 
-        {/* Leads book: repeat customers by saved WhatsApp number */}
+        {/* Leads book: repeat customers by saved WhatsApp number.
+            Full-width row below (daily 2/5 + orders 3/5 fill row 1) so it never
+            steals columns or leaves an empty gap beside itself. */}
         {addons.crm === true && (
-          <Card className="p-6">
+          <Card className="p-6 xl:order-last xl:col-span-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
@@ -745,7 +747,7 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
             ) : topCustomers.length === 0 ? (
               <p className="rounded-xl bg-slate-50 p-4 text-center text-xs font-semibold text-slate-500">{S.crmEmpty}</p>
             ) : (
-              <ul className="scroll-thin max-h-[20rem] space-y-2.5 overflow-y-auto pe-1">
+              <ul className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                 {topCustomers.map((c, i) => (
                   <li key={c.phone} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-xs font-black text-white">
