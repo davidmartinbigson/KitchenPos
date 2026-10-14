@@ -30,6 +30,29 @@ export async function GET(request: Request) {
   if (!rateOk(ip)) return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
 
   const { searchParams } = new URL(request.url);
+
+  if (searchParams.get("popular") === "1") {
+    const rows = await db
+      .select({ city: users.city })
+      .from(users)
+      .where(and(eq(users.role, "owner"), ne(users.suspended, true), isNotNull(users.slug)))
+      .limit(400);
+    const counts = new Map<string, number>();
+    const canon = new Map<string, string>(); // lowercase → first-seen spelling
+    for (const r of rows) {
+      const c = r.city.trim();
+      if (!c) continue;
+      const key = c.toLowerCase();
+      if (!canon.has(key)) canon.set(key, c);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const cities = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([key]) => canon.get(key) as string);
+    return NextResponse.json({ cities });
+  }
+
   const city = (searchParams.get("city") ?? "").trim().slice(0, 60);
   if (city.length < 3) return NextResponse.json({ restaurants: [] });
 

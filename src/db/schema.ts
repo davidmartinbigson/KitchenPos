@@ -105,6 +105,23 @@ export const licenseKeys = pgTable(
  * role: "chef" (kitchen display) or "cashier" (point of sale).
  * orders routed by item category go to matching chefs.
  */
+/**
+ * Marketing leads captured by the landing-page chatbot.
+ * A row only exists when a visitor shared a valid phone/WhatsApp number —
+ * everything else (name/city without contact) never reaches storage.
+ */
+export const chatLeads = pgTable("chat_leads", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  /** "owner" | "customer" — who the visitor said they are. */
+  kind: text("kind").notNull().default("customer"),
+  country: text("country").notNull().default(""),
+  city: text("city").notNull().default(""),
+  /** Normalized WhatsApp digits (validated 7–15 chars). */
+  phone: text("phone").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const staff = pgTable(
   "staff",
   {

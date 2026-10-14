@@ -12,6 +12,7 @@ import {
   Crown,
   KeyRound,
   LogOut,
+  MessageCircle,
   Plus,
   Search,
   ShieldX,
@@ -57,6 +58,16 @@ type Customer = {
 };
 
 type Summary = { customers: number; active: number; online: number; offline: number; orders: number };
+
+type ChatLead = {
+  id: number;
+  name: string;
+  kind: string;
+  country: string;
+  city: string;
+  phone: string;
+  createdAt: string;
+};
 
 type LicenseKey = {
   id: number;
@@ -105,6 +116,8 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   const [copied, setCopied] = useState<string | null>(null);
   const [limitTarget, setLimitTarget] = useState<Customer | null>(null);
   const [limitValue, setLimitValue] = useState("500");
+  const [leads, setLeads] = useState<ChatLead[] | null>(null);
+  const [leadsToday, setLeadsToday] = useState(0);
 
   const loadCustomers = useCallback(() => {
     fetch("/api/admin/customers")
@@ -114,6 +127,16 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
         setSummary(data.summary ?? null);
       })
       .catch(() => setCustomers([]));
+  }, []);
+
+  const loadLeads = useCallback(() => {
+    fetch("/api/admin/leads")
+      .then((r) => r.json())
+      .then((data: { leads: ChatLead[]; today: number }) => {
+        setLeads(data.leads ?? []);
+        setLeadsToday(data.today ?? 0);
+      })
+      .catch(() => setLeads([]));
   }, []);
 
   const loadKeys = useCallback(() => {
@@ -126,10 +149,15 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   useEffect(() => {
     loadCustomers();
     loadKeys();
-    // Keep live Online/Offline presence fresh.
+    loadLeads();
+    // Keep live Online/Offline presence fresh; leads poll a bit slower.
     const timer = setInterval(loadCustomers, 15_000);
-    return () => clearInterval(timer);
-  }, [loadCustomers, loadKeys]);
+    const leadTimer = setInterval(loadLeads, 30_000);
+    return () => {
+      clearInterval(timer);
+      clearInterval(leadTimer);
+    };
+  }, [loadCustomers, loadKeys, loadLeads]);
 
   const filtered = useMemo(() => {
     if (!customers) return null;
@@ -330,6 +358,67 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
               </motion.div>
             );
           })}
+        </section>
+
+        {/* Chat leads from the landing-page chatbot */}
+        <section className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 px-5 py-4 text-white">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/20 text-2xl shadow-inner">💬</span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-black">{A.chatLeadsTitle}</h2>
+              <p className="text-xs font-semibold text-white/80">{A.chatLeadsHint}</p>
+            </div>
+            <span className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-black ring-1 ring-white/40">
+              {formatNumber(leadsToday, lang)} {A.chatLeadsToday} · {formatNumber(leads?.length ?? 0, lang)} total
+            </span>
+          </div>
+          {!leads || leads.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm font-semibold text-slate-400">{A.chatLeadsEmpty}</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {leads.slice(0, 25).map((lead) => (
+                <li key={lead.id} className="flex flex-wrap items-center gap-3 px-5 py-3 transition hover:bg-emerald-50/40">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 text-lg ring-1 ring-emerald-200/60">
+                    {lead.kind === "owner" ? "🏪" : "🍔"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-black text-slate-800">
+                      {lead.name || "—"}
+                      <span
+                        className={
+                          lead.kind === "owner"
+                            ? "rounded-full bg-fuchsia-100 px-2 py-0.5 text-[10px] font-black text-fuchsia-700 ring-1 ring-fuchsia-200"
+                            : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-200"
+                        }
+                      >
+                        {lead.kind === "owner" ? A.chatLeadOwner : A.chatLeadCustomer}
+                      </span>
+                    </p>
+                    <p className="text-xs font-semibold text-slate-500">
+                      📍 {[lead.country, lead.city].filter(Boolean).join(" · ") || "—"} ·{" "}
+                      {new Date(lead.createdAt).toLocaleString(lang === "ar" ? "ar" : lang === "ur" ? "ur-PK" : "en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <a
+                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                      `Hi ${lead.name || ""}! I'm from Kitchen POS — you asked about us on our website. How can I help? 🙂`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    dir="ltr"
+                    className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-black text-white shadow-sm shadow-emerald-500/30 transition hover:bg-emerald-600"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> {lead.phone}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Tabs */}

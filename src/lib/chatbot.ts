@@ -39,6 +39,13 @@ type Dict = {
   onlineNow: string;
   onlineTag: string;
   offlineTag: string;
+  askIntent: string;
+  intentOwnerChip: string;
+  intentCustomerChip: string;
+  askPhone: string;
+  phoneInvalid: string;
+  leadThanks: (name: string) => string;
+  skipChip: string;
   title: string;
   subtitle: string;
   inputPlaceholder: string;
@@ -59,6 +66,16 @@ const D: Record<ChatLang, Dict> = {
     viewMenu: "View menu",
     onlineTag: "Online",
     offlineTag: "Offline",
+    askIntent: "Quick one — are you a restaurant owner or a hungry customer? 😄",
+    intentOwnerChip: "I'm a restaurant owner 🏪",
+    intentCustomerChip: "I'm a customer 🍔",
+    askPhone:
+      "Great! Now share your WhatsApp number so our team can help you set up (or type 'skip'):",
+    phoneInvalid:
+      "Hmm, that doesn't look like a valid number — include your country code, e.g. +92 300 1234567 🙂",
+    leadThanks: (n) =>
+      `All set, ${n}! 🎉 Our team will WhatsApp you soon. Meanwhile, tap below and start your free trial right now — takes 5 minutes:`,
+    skipChip: "Skip",
     pricing: "Pricing",
     trial: "Start free trial",
     trialReply:
@@ -96,6 +113,16 @@ const D: Record<ChatLang, Dict> = {
     viewMenu: "مینیو دیکھیں",
     onlineTag: "آن لائن",
     offlineTag: "آف لائن",
+    askIntent: "ایک بات — آپ ریستوران کے مالک ہیں یا گاہک؟ 😄",
+    intentOwnerChip: "میں ریستوران کا مالک ہوں 🏪",
+    intentCustomerChip: "میں گاہک ہوں 🍔",
+    askPhone:
+      "بہت اچھے! اب اپنا WhatsApp نمبر بتا دیں تاکہ ہماری ٹیم سیٹ اپ میں مدد کرے (یا 'skip' لکھیں):",
+    phoneInvalid:
+      "یہ نمبر درست نہیں لگ رہا — کنٹری کوڈ کے ساتھ لکھیں، مثلاً +92 300 1234567 🙂",
+    leadThanks: (n) =>
+      `${n}، سب تیار! 🎉 ہماری ٹیم جلد WhatsApp کرے گی۔ اس دوران نیچے بٹن دبا کر مفت ٹرائل شروع کریں — صرف 5 منٹ:`,
+    skipChip: "چھوڑ دیں",
     pricing: "قیمتیں",
     trial: "مفت ٹرائل شروع کریں",
     trialReply:
@@ -133,6 +160,16 @@ const D: Record<ChatLang, Dict> = {
     viewMenu: "عرض القائمة",
     onlineTag: "متصل",
     offlineTag: "غير متصل",
+    askIntent: "سؤال سريع — هل أنت صاحب مطعم أم عميل جائع؟ 😄",
+    intentOwnerChip: "أنا صاحب مطعم 🏪",
+    intentCustomerChip: "أنا عميل 🍔",
+    askPhone:
+      "رائع! شارك رقم الواتساب الخاص بك ليساعدك فريقنا في الإعداد (أو اكتب 'skip'):",
+    phoneInvalid:
+      "يبدو أن هذا الرقم غير صحيح — اكتبه مع رمز الدولة، مثل: +92 300 1234567 🙂",
+    leadThanks: (n) =>
+      `تم كل شيء يا ${n}! 🎉 سيتواصل معك فريقنا عبر واتساب قريباً. وفي هذه الأثناء اضغط الزر وابدأ تجربتك المجانية الآن — 5 دقائق فقط:`,
+    skipChip: "تخطّي",
     pricing: "الأسعار",
     trial: "ابدأ التجربة المجانية",
     trialReply:
@@ -162,7 +199,12 @@ const D: Record<ChatLang, Dict> = {
 export const chatDict = D;
 
 /** Where in the conversation we are (kept client-side, derived from history). */
-export type ChatStep = "name" | "country" | "city" | "free";
+export type ChatStep = "name" | "intent" | "country" | "city" | "phone" | "free";
+
+const OWNER_RE = /(owner|business|restaurant|cafe|hotel|مالک|صاحب|مالك|مطعم|دکان|ریستوران)/i;
+const CUSTOMER_RE = /(customer|hungry|eat|گاہک|خریدار|عميل|جائع|کھانا)/i;
+const SKIP_RE = /^(skip|چھوڑ دیں|تخطّي|no|نہیں|لا)$/i;
+const PHONEISH = /^[+()\d][\d\s().-]{5,22}$/;
 
 const PRICEISH = /(price|pricing|cost|fee|payment|plan|قیمت|قیمتیں|سست|پلان|رس|سعر|أسعار|خطة)/i;
 const TRIALISH = /(trial|start|signup|sign ?up|free|ٹریل|شروع|تجربة|مجان)/i;
@@ -199,20 +241,39 @@ export function botReply(
   step: ChatStep,
   userText: string,
   name: string,
-): { messages: ChatMessage[]; next: ChatStep; wantCity?: string; doneSearch?: boolean } {
+): { messages: ChatMessage[]; next: ChatStep; wantCity?: string; doneSearch?: boolean; validPhone?: string } {
   const d = D[lang];
   const text = userText.trim();
   const low = text.toLowerCase();
 
   if (step === "name") {
     const n = sanitizeName(text);
-    return { messages: [{ from: "bot", text: d.nice(n) }], next: "country" };
+    return {
+      messages: [{ from: "bot", text: d.nice(n) }, { from: "bot", text: d.askIntent }],
+      next: "intent",
+    };
+  }
+  if (step === "intent") {
+    if (OWNER_RE.test(text) && !CUSTOMER_RE.test(text)) {
+      return { messages: [{ from: "bot", text: d.askPhone }], next: "phone" };
+    }
+    return { messages: [{ from: "bot", text: d.askCountry }], next: "country" };
+  }
+  if (step === "phone") {
+    if (SKIP_RE.test(low)) return { messages: [{ from: "bot", text: d.fallback }], next: "free" };
+    if (!PHONEISH.test(text)) return { messages: [{ from: "bot", text: d.phoneInvalid }], next: "phone" };
+    // Valid number — the UI persists this as the lead, bot thanks them.
+    return { messages: [{ from: "bot", text: d.leadThanks(name || "friend") }], next: "free", validPhone: text };
   }
   if (step === "country") {
     return { messages: [{ from: "bot", text: D[lang].askCity }], next: "city" };
   }
   if (step === "city") {
-    return { messages: [{ from: "bot", text: d.searching(text) }], next: "free", wantCity: text };
+    return {
+      messages: [{ from: "bot", text: d.searching(text) }],
+      next: "free",
+      wantCity: text,
+    };
   }
 
   // free-talk intents
@@ -235,4 +296,9 @@ export function openingMessages(lang: ChatLang): ChatMessage[] {
     { from: "bot", text: D[lang].welcome },
     { from: "bot", text: D[lang].askName },
   ];
+}
+
+/** After restaurant results, proactively offer the phone step too. */
+export function afterResultsMessages(lang: ChatLang): ChatMessage[] {
+  return [{ from: "bot", text: D[lang].askPhone }];
 }

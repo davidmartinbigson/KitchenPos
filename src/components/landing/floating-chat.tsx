@@ -15,24 +15,37 @@ import {
 } from "@/lib/chatbot";
 
 const typingDelay = () => 500 + Math.random() * 450;
+const STORAGE_KEY = "kp_chat_v1";
+
+type Persisted = {
+  msgs: ChatMessage[];
+  step: ChatStep;
+  name: string;
+  kind: "owner" | "customer" | null;
+};
 
 /**
  * Bottom-right floating assistant on the landing page. Guided English-first
- * flow (name → country → city → restaurants) that automatically follows the
- * site's current language. Deterministic V1 brain in src/lib/chatbot.ts.
+ * flow (name → owner/customer → country → city → restaurants → phone) that
+ * automatically follows the site's current language. A lead is only stored
+ * once a VALID phone number is shared — everything before that stays
+ * client-side. Conversation persists in localStorage.
  */
 export function FloatingChat() {
   const { lang, isUrdu } = useI18n();
-  const d = chatDict[(lang as ChatLang)] ?? chatDict.en;
+  const d = chatDict[lang as ChatLang] ?? chatDict.en;
 
   const [open, setOpen] = useState(false);
   const [teaser, setTeaser] = useState(false);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [step, setStep] = useState<ChatStep>("name");
   const [name, setName] = useState("");
+  const [kind, setKind] = useState<"owner" | "customer" | null>(null);
+  const [lastCity, setLastCity] = useState("");
+  const [lastCountry, setLastCountry] = useState("");
+  const [popularCities, setPopularCities] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
-  const [showCountryChips, setShowCountryChips] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
 
@@ -46,7 +59,48 @@ export function FloatingChat() {
     };
   }, []);
 
-  // Initialise conversation on first open.
+  // Popular city chips for the city step (real counts from the DB).
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/public/restaurants?popular=1");
+        const data = (await res.json()) as { cities?: string[] };
+        if (Array.isArray(data.cities) && data.cities.length > 0) setPopularCities(data.cities);
+      } catch {
+        /* chips are optional */
+      }
+    })();
+  }, []);
+
+  // Restore saved conversation.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Persisted;
+      if (Array.isArray(saved.msgs) && saved.msgs.length > 0) {
+        setMsgs(saved.msgs.slice(-60));
+        setStep(saved.step ?? "free");
+        setName(saved.name ?? "");
+        setKind(saved.kind ?? null);
+        startedRef.current = true;
+      }
+    } catch {
+      /* fresh start */
+    }
+  }, []);
+
+  // Persist conversation (trimmed).
+  useEffect(() => {
+    if (msgs.length === 0) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ msgs: msgs.slice(-60), step, name, kind }));
+    } catch {
+      /* storage full/blocked — fine */
+    }
+  }, [msgs, step, name, kind]);
+
+  // Initialise conversation on first open (only when nothing restored).
   useEffect(() => {
     if (!open || startedRef.current) return;
     startedRef.current = true;
@@ -63,8 +117,6 @@ export function FloatingChat() {
     };
   }, [open, lang]);
 
-  // Language switched mid-chat → keep history; nothing to do (new replies follow new lang).
-
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs, typing, open]);
@@ -78,6 +130,7 @@ export function FloatingChat() {
   };
 
   const searchCity = async (city: string) => {
+    setLastCity(city);
     try {
       const res = await fetch(`/api/public/restaurants?city=${encodeURIComponent(city)}`);
       const data = (await res.json()) as { restaurants?: ChatMessage["restaurants"] };
@@ -90,6 +143,7 @@ export function FloatingChat() {
           const counts = new Map<string, number>();
           for (const r of list) counts.set(r.city, (counts.get(r.city) ?? 0) + 1);
           const displayCity = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+          setLastCity(displayCity);
           setMsgs((prev) => [
             ...prev,
             { from: "bot", text: d.foundHeading(displayCity, list.length), restaurants: list },
@@ -100,32 +154,74 @@ export function FloatingChat() {
       }, typingDelay());
     } catch {
       pushMessages([{ from: "bot", text: d.noResults(city) }]);
+      return;
     }
+    // After results, offer the phone step — a lead only "counts" with a number.
+    setTimeout(() => {
+      pushMessages([{ from: "bot", text: d.askPhone }]);
+      setStep("phone");
+    }, typingDelay() + 450);
+  };
+
+  const saveLead = (phone: string) => {
+    void fetch("/api/public/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        kind: kind ?? "customer",
+        country: lastCountry,
+        city: lastCity,
+        phone,
+      }),
+    }).catch(() => {});
   };
 
   const send = (raw?: string) => {
     const text = (raw ?? input).trim();
     if (!text || typing) return;
     setInput("");
-    setShowCountryChips(false);
     setMsgs((prev) => [...prev, { from: "user", text }]);
 
     const out = botReply(lang as ChatLang, step, text, name);
     if (step === "name") {
       const clean = text.replace(/[^\p{L}\p{N}\s.'-]/gu, "").trim().slice(0, 24);
       setName(clean || "friend");
-      setShowCountryChips(true);
     }
+    if (step === "intent") {
+      const isOwner = /(owner|business|restaurant|cafe|hotel|مالک|صاحب|مالك|مطعم|دکان|ریستوران)/i.test(text);
+      setKind(isOwner ? "owner" : "customer");
+    }
+    if (step === "country") setLastCountry(text);
     setStep(out.next);
     pushMessages(out.messages);
     if (out.wantCity) {
-      // The "searching…" bubble is already queued; run search after the beat.
       setTimeout(() => void searchCity(out.wantCity as string), typingDelay() + 250);
     }
+    if (out.validPhone) saveLead(out.validPhone);
   };
 
   const dir = isUrdu ? "rtl" : "ltr";
-  const chips = showCountryChips ? d.countryChips : d.footerChips;
+  const chips =
+    step === "intent"
+      ? [d.intentOwnerChip, d.intentCustomerChip]
+      : step === "country"
+        ? d.countryChips
+        : step === "city"
+          ? popularCities.length > 0
+            ? popularCities
+            : []
+          : step === "phone"
+            ? [d.skipChip]
+            : step === "free"
+              ? d.footerChips
+              : [];
+
+  const showTrialCta = msgs.some(
+    (m) =>
+      m.text === chatDict[lang as ChatLang]?.trialReply ||
+      (m.text.includes("🎉") && m.from === "bot" && (m.text.includes("WhatsApp") || m.text.includes("واتساب"))),
+  );
 
   return (
     <div className="fixed bottom-5 z-[70] print:hidden" style={{ insetInlineEnd: "1.25rem" }} dir={dir}>
@@ -266,7 +362,7 @@ export function FloatingChat() {
               )}
 
               {/* Quick replies */}
-              {!typing && (
+              {!typing && chips.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {chips.map((c) => (
                     <button
@@ -281,8 +377,8 @@ export function FloatingChat() {
               )}
             </div>
 
-            {/* Trial CTA strip (after trial intent) */}
-            {msgs.some((m) => m.text === chatDict[(lang as ChatLang)]?.trialReply) && (
+            {/* Trial CTA strip (after trial intent / completed lead) */}
+            {showTrialCta && (
               <div className="border-t border-slate-100 bg-white px-4 py-2.5">
                 <Link
                   href="/signup"
