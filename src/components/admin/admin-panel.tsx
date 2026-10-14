@@ -66,6 +66,7 @@ type ChatLead = {
   country: string;
   city: string;
   phone: string;
+  restaurant?: string;
   createdAt: string;
 };
 
@@ -118,6 +119,11 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   const [limitValue, setLimitValue] = useState("500");
   const [leads, setLeads] = useState<ChatLead[] | null>(null);
   const [leadsToday, setLeadsToday] = useState(0);
+  const [leadsTotal, setLeadsTotal] = useState(0);
+  const [leadPage, setLeadPage] = useState(1);
+  const [leadBusy, setLeadBusy] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<ChatLead | null>(null);
+  const [deleteLeadTarget, setDeleteLeadTarget] = useState<ChatLead | null>(null);
 
   const loadCustomers = useCallback(() => {
     fetch("/api/admin/customers")
@@ -130,14 +136,15 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
   }, []);
 
   const loadLeads = useCallback(() => {
-    fetch("/api/admin/leads")
+    fetch(`/api/admin/leads?page=${leadPage}&per=8`)
       .then((r) => r.json())
-      .then((data: { leads: ChatLead[]; today: number }) => {
+      .then((data: { leads: ChatLead[]; today: number; total: number }) => {
         setLeads(data.leads ?? []);
         setLeadsToday(data.today ?? 0);
+        setLeadsTotal(data.total ?? 0);
       })
       .catch(() => setLeads([]));
-  }, []);
+  }, [leadPage]);
 
   const loadKeys = useCallback(() => {
     fetch("/api/admin/keys")
@@ -191,6 +198,23 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
       toast.show(t.networkError, "error");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function deleteLead() {
+    if (!deleteLeadTarget) return;
+    setLeadBusy(true);
+    try {
+      await fetch(`/api/admin/leads/${deleteLeadTarget.id}`, { method: "DELETE" });
+      if (selectedLead?.id === deleteLeadTarget.id) setSelectedLead(null);
+      setDeleteLeadTarget(null);
+      if ((leads?.length ?? 1) === 1 && leadPage > 1) {
+        setLeadPage((p) => p - 1);
+      } else {
+        loadLeads();
+      }
+    } finally {
+      setLeadBusy(false);
     }
   }
 
@@ -369,55 +393,84 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
               <p className="text-xs font-semibold text-white/80">{A.chatLeadsHint}</p>
             </div>
             <span className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-black ring-1 ring-white/40">
-              {formatNumber(leadsToday, lang)} {A.chatLeadsToday} · {formatNumber(leads?.length ?? 0, lang)} total
+              {formatNumber(leadsToday, lang)} {A.chatLeadsToday} · {formatNumber(leadsTotal, lang)} total
             </span>
           </div>
           {!leads || leads.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-slate-400">{A.chatLeadsEmpty}</p>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {leads.slice(0, 25).map((lead) => (
-                <li key={lead.id} className="flex flex-wrap items-center gap-3 px-5 py-3 transition hover:bg-emerald-50/40">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 text-lg ring-1 ring-emerald-200/60">
-                    {lead.kind === "owner" ? "🏪" : "🍔"}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 text-sm font-black text-slate-800">
-                      {lead.name || "—"}
-                      <span
-                        className={
-                          lead.kind === "owner"
-                            ? "rounded-full bg-fuchsia-100 px-2 py-0.5 text-[10px] font-black text-fuchsia-700 ring-1 ring-fuchsia-200"
-                            : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-200"
-                        }
-                      >
-                        {lead.kind === "owner" ? A.chatLeadOwner : A.chatLeadCustomer}
-                      </span>
-                    </p>
-                    <p className="text-xs font-semibold text-slate-500">
-                      📍 {[lead.country, lead.city].filter(Boolean).join(" · ") || "—"} ·{" "}
-                      {new Date(lead.createdAt).toLocaleString(lang === "ar" ? "ar" : lang === "ur" ? "ur-PK" : "en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <a
-                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                      `Hi ${lead.name || ""}! I'm from Kitchen POS — you asked about us on our website. How can I help? 🙂`,
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    dir="ltr"
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-black text-white shadow-sm shadow-emerald-500/30 transition hover:bg-emerald-600"
+            <>
+              <ul className="divide-y divide-slate-100">
+                {leads.map((lead) => (
+                  <li
+                    key={lead.id}
+                    onClick={() => setSelectedLead(lead)}
+                    className="flex cursor-pointer flex-wrap items-center gap-3 px-5 py-3 transition hover:bg-emerald-50/60"
+                    title={A.leadDetailsTitle}
                   >
-                    <MessageCircle className="h-3.5 w-3.5" /> {lead.phone}
-                  </a>
-                </li>
-              ))}
-            </ul>
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 text-lg ring-1 ring-emerald-200/60">
+                      {lead.kind === "owner" ? "🏪" : "🍔"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-black text-slate-800">
+                        {lead.name || "—"}
+                        {lead.restaurant ? <span className="font-bold text-slate-500">· {lead.restaurant}</span> : null}
+                        <span
+                          className={
+                            lead.kind === "owner"
+                              ? "rounded-full bg-fuchsia-100 px-2 py-0.5 text-[10px] font-black text-fuchsia-700 ring-1 ring-fuchsia-200"
+                              : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-200"
+                          }
+                        >
+                          {lead.kind === "owner" ? A.chatLeadOwner : A.chatLeadCustomer}
+                        </span>
+                      </p>
+                      <p className="text-xs font-semibold text-slate-500">
+                        📍 {[lead.country, lead.city].filter(Boolean).join(" · ") || "—"} ·{" "}
+                        {new Date(lead.createdAt).toLocaleString(lang === "ar" ? "ar" : lang === "ur" ? "ur-PK" : "en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      <p className="text-xs font-bold text-emerald-700" dir="ltr">📞 {lead.phone}</p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteLeadTarget(lead);
+                      }}
+                      aria-label={A.leadDeleteTitle}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {leadsTotal > 8 && (
+                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-5 py-2.5">
+                  <button
+                    onClick={() => setLeadPage((p) => Math.max(1, p - 1))}
+                    disabled={leadPage <= 1}
+                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 disabled:opacity-40"
+                  >
+                    ← {A.leadPrev}
+                  </button>
+                  <span className="text-xs font-black text-slate-500">
+                    {formatNumber(leadPage, lang)} / {formatNumber(Math.max(1, Math.ceil(leadsTotal / 8)), lang)}
+                  </span>
+                  <button
+                    onClick={() => setLeadPage((p) => Math.min(Math.max(1, Math.ceil(leadsTotal / 8)), p + 1))}
+                    disabled={leadPage >= Math.max(1, Math.ceil(leadsTotal / 8))}
+                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 disabled:opacity-40"
+                  >
+                    {A.leadNext} →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
@@ -971,6 +1024,98 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
         <p className="text-slate-600">
           {A.deleteConfirm}
           {deleteTarget && <span className="mt-2 block font-bold text-slate-900">{deleteTarget.shopName}</span>}
+        </p>
+      </Modal>
+
+      {/* Lead details modal */}
+      <Modal
+        open={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+        title={A.leadDetailsTitle}
+        footer={
+          <div className="flex flex-wrap justify-between gap-3">
+            <Button
+              variant="ghost"
+              className="text-rose-600"
+              onClick={() => {
+                setDeleteLeadTarget(selectedLead);
+              }}
+            >
+              <Trash2 className="h-4 w-4" /> {t.delete}
+            </Button>
+            {selectedLead && (
+              <a
+                href={`https://wa.me/${selectedLead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                  `Hi ${selectedLead.name || ""}! I'm from Kitchen POS — you asked about us on our website. How can I help? 🙂`,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-emerald-500/30 transition hover:bg-emerald-600"
+              >
+                <MessageCircle className="h-4 w-4" /> {selectedLead.phone}
+              </a>
+            )}
+          </div>
+        }
+      >
+        {selectedLead && (
+          <dl className="space-y-3">
+            {[
+              [A.leadNameLabel, selectedLead.name || "—"],
+              [
+                A.leadTypeLabel,
+                selectedLead.kind === "owner" ? `🏪 ${A.chatLeadOwner}` : `🍔 ${A.chatLeadCustomer}`,
+              ],
+              ...(selectedLead.restaurant ? [[A.leadRestaurantLabel, selectedLead.restaurant]] : []),
+              [A.leadPhoneLabel, selectedLead.phone],
+              [A.leadCountryLabel, selectedLead.country || "—"],
+              [A.leadCityLabel, selectedLead.city || "—"],
+              [
+                A.leadReceivedLabel,
+                new Date(selectedLead.createdAt).toLocaleString(lang === "ar" ? "ar" : lang === "ur" ? "ur-PK" : "en-GB", {
+                  weekday: "short",
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              ],
+            ].map(([label, value]) => (
+              <div key={label as string} className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 px-3.5 py-2.5 ring-1 ring-slate-100">
+                <dt className="shrink-0 text-xs font-bold uppercase tracking-wide text-slate-400">{label}</dt>
+                <dd className="truncate text-sm font-black text-slate-800" dir={label === A.leadPhoneLabel ? "ltr" : undefined}>
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Modal>
+
+      {/* Lead delete confirmation */}
+      <Modal
+        open={!!deleteLeadTarget}
+        onClose={() => setDeleteLeadTarget(null)}
+        title={A.leadDeleteTitle}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setDeleteLeadTarget(null)}>
+              {t.cancel}
+            </Button>
+            <Button className="!bg-rose-600 !text-white" onClick={deleteLead} disabled={leadBusy}>
+              <Trash2 className="h-4 w-4" /> {t.delete}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-slate-600">
+          {A.leadDeleteConfirm}
+          {deleteLeadTarget && (
+            <span className="mt-2 block font-bold text-slate-900">
+              {deleteLeadTarget.name || "—"} · {deleteLeadTarget.phone}
+            </span>
+          )}
         </p>
       </Modal>
     </div>
