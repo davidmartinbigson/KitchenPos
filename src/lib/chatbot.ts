@@ -11,7 +11,7 @@ export interface ChatMessage {
   from: "bot" | "user";
   text: string;
   /** Structured restaurant results (rendered as cards). */
-  restaurants?: { id: number; name: string; slug: string; city: string }[];
+  restaurants?: { id: number; name: string; slug: string; city: string; online?: boolean }[];
 }
 
 type Dict = {
@@ -37,6 +37,8 @@ type Dict = {
   countryChips: string[];
   footerChips: string[];
   onlineNow: string;
+  onlineTag: string;
+  offlineTag: string;
   title: string;
   subtitle: string;
   inputPlaceholder: string;
@@ -55,6 +57,8 @@ const D: Record<ChatLang, Dict> = {
     noResults: (c) =>
       `Hmm, no restaurants are listed in ${c} yet 😅 But YOUR restaurant could be the first one there! Want me to show you how?`,
     viewMenu: "View menu",
+    onlineTag: "Online",
+    offlineTag: "Offline",
     pricing: "Pricing",
     trial: "Start free trial",
     trialReply:
@@ -90,6 +94,8 @@ const D: Record<ChatLang, Dict> = {
     noResults: (c) =>
       `${c} میں ابھی کوئی ریستوران لسٹ نہیں 😅 لیکن آپ کا ریستوران وہاں پہلا ہو سکتا ہے! بتاؤں کیسے؟`,
     viewMenu: "مینیو دیکھیں",
+    onlineTag: "آن لائن",
+    offlineTag: "آف لائن",
     pricing: "قیمتیں",
     trial: "مفت ٹرائل شروع کریں",
     trialReply:
@@ -125,6 +131,8 @@ const D: Record<ChatLang, Dict> = {
     noResults: (c) =>
       `لا توجد مطاعم مدرجة في ${c} بعد 😅 لكن مطعمك يمكن أن يكون الأول! أتريد أن أريك كيف؟`,
     viewMenu: "عرض القائمة",
+    onlineTag: "متصل",
+    offlineTag: "غير متصل",
     pricing: "الأسعار",
     trial: "ابدأ التجربة المجانية",
     trialReply:

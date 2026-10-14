@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Send, X, UtensilsCrossed, Sparkles, ArrowUpRight } from "lucide-react";
+import { Bot, Send, X, UtensilsCrossed, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/components/providers/language-provider";
 import {
@@ -202,22 +202,45 @@ export function FloatingChat() {
                     {m.text}
                     {m.restaurants && m.restaurants.length > 0 && (
                       <div className="mt-2.5 space-y-1.5">
-                        {m.restaurants.map((r) => (
-                          <a
-                            key={r.id}
-                            href={`/menu/${r.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-orange-50 to-rose-50 px-3 py-2 text-start ring-1 ring-orange-200/70 transition hover:from-orange-100 hover:to-rose-100 hover:ring-orange-300"
-                          >
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-base shadow-sm">🍽️</span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13px] font-black text-slate-800">{r.name}</span>
-                              <span className="block text-[11px] font-semibold text-orange-600">📍 {r.city} · {d.viewMenu}</span>
-                            </span>
-                            <ArrowUpRight className="h-4 w-4 shrink-0 text-orange-500" />
-                          </a>
-                        ))}
+                        {m.restaurants.map((r) =>
+                          r.online === false ? (
+                            /* Offline → visible but NOT clickable: an opened menu
+                               with no one on the POS side would waste the order. */
+                            <div
+                              key={r.id}
+                              className="flex items-center gap-2.5 rounded-xl bg-slate-100 px-3 py-2 text-start ring-1 ring-slate-200 opacity-75"
+                              title={r.name}
+                            >
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-base shadow-sm grayscale">🍽️</span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13px] font-black text-slate-500">{r.name}</span>
+                                <span className="block text-[11px] font-semibold text-slate-400">📍 {r.city}</span>
+                              </span>
+                              <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black text-slate-500">
+                                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                {d.offlineTag}
+                              </span>
+                            </div>
+                          ) : (
+                            <a
+                              key={r.id}
+                              href={`/menu/${r.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-orange-50 to-rose-50 px-3 py-2 text-start ring-1 ring-orange-200/70 transition hover:from-orange-100 hover:to-rose-100 hover:ring-orange-300"
+                            >
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-base shadow-sm">🍽️</span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13px] font-black text-slate-800">{r.name}</span>
+                                <span className="block text-[11px] font-semibold text-orange-600">📍 {r.city} · {d.viewMenu}</span>
+                              </span>
+                              <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-200">
+                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                                {d.onlineTag}
+                              </span>
+                            </a>
+                          ),
+                        )}
                       </div>
                     )}
                   </div>
