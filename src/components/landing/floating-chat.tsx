@@ -86,9 +86,13 @@ export function FloatingChat() {
       setTimeout(() => {
         setTyping(false);
         if (list.length > 0) {
+          // Show the matched city's REAL spelling (e.g. user typed "Kara" → heading says "Karachi").
+          const counts = new Map<string, number>();
+          for (const r of list) counts.set(r.city, (counts.get(r.city) ?? 0) + 1);
+          const displayCity = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
           setMsgs((prev) => [
             ...prev,
-            { from: "bot", text: d.foundHeading(city, list.length), restaurants: list },
+            { from: "bot", text: d.foundHeading(displayCity, list.length), restaurants: list },
           ]);
         } else {
           setMsgs((prev) => [...prev, { from: "bot", text: d.noResults(city) }]);
