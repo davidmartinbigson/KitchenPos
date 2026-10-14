@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/components/providers/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
+import { FloatingChat } from "@/components/landing/floating-chat";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button, cn } from "@/components/ui";
 import { currencyForCountry, detectCountryFromLocale } from "@/lib/countries";
@@ -454,6 +455,8 @@ export function LandingPage({ loggedIn }: { loggedIn: boolean }) {
         </p>
         <p className="mt-2">{L.footer}</p>
       </footer>
+
+      <FloatingChat />
     </div>
   );
 }
