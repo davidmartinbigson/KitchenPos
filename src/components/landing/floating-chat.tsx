@@ -22,6 +22,7 @@ type Persisted = {
   step: ChatStep;
   name: string;
   kind: "owner" | "customer" | null;
+  restaurant?: string;
 };
 
 /**
@@ -44,6 +45,7 @@ export function FloatingChat() {
   const [lastCity, setLastCity] = useState("");
   const [lastCountry, setLastCountry] = useState("");
   const [popularCities, setPopularCities] = useState<string[]>([]);
+  const [restaurantName, setRestaurantName] = useState("");
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -83,6 +85,7 @@ export function FloatingChat() {
         setStep(saved.step ?? "free");
         setName(saved.name ?? "");
         setKind(saved.kind ?? null);
+        setRestaurantName(saved.restaurant ?? "");
         startedRef.current = true;
       }
     } catch {
@@ -94,11 +97,11 @@ export function FloatingChat() {
   useEffect(() => {
     if (msgs.length === 0) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ msgs: msgs.slice(-60), step, name, kind }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ msgs: msgs.slice(-60), step, name, kind, restaurant: restaurantName }));
     } catch {
       /* storage full/blocked — fine */
     }
-  }, [msgs, step, name, kind]);
+  }, [msgs, step, name, kind, restaurantName]);
 
   // Initialise conversation on first open (only when nothing restored).
   useEffect(() => {
@@ -171,6 +174,7 @@ export function FloatingChat() {
         name,
         kind: kind ?? "customer",
         country: lastCountry,
+        restaurant: restaurantName,
         city: lastCity,
         phone,
       }),
@@ -183,7 +187,7 @@ export function FloatingChat() {
     setInput("");
     setMsgs((prev) => [...prev, { from: "user", text }]);
 
-    const out = botReply(lang as ChatLang, step, text, name);
+    const out = botReply(lang as ChatLang, step, text, name, kind);
     if (step === "name") {
       const clean = text.replace(/[^\p{L}\p{N}\s.'-]/gu, "").trim().slice(0, 24);
       setName(clean || "friend");
@@ -193,6 +197,8 @@ export function FloatingChat() {
       setKind(isOwner ? "owner" : "customer");
     }
     if (step === "country") setLastCountry(text);
+    if (step === "city" && kind === "owner") setLastCity(text);
+    if (out.restaurant) setRestaurantName(out.restaurant);
     setStep(out.next);
     pushMessages(out.messages);
     if (out.wantCity) {
@@ -208,14 +214,20 @@ export function FloatingChat() {
       : step === "country"
         ? d.countryChips
         : step === "city"
-          ? popularCities.length > 0
-            ? popularCities
-            : []
+          ? kind === "owner"
+            ? []
+            : popularCities.length > 0
+              ? popularCities
+              : []
           : step === "phone"
             ? [d.skipChip]
-            : step === "free"
-              ? d.footerChips
-              : [];
+            : step === "trial"
+              ? [d.trialYesChip, d.trialNoChip]
+              : step === "free"
+                ? kind === "owner"
+                  ? []
+                  : d.footerChips
+                : [];
 
   const showTrialCta = msgs.some(
     (m) =>

@@ -17,11 +17,29 @@ export function ensureChatLeadsTable(): Promise<void> {
         "country" text NOT NULL DEFAULT '',
         "city" text NOT NULL DEFAULT '',
         "phone" text NOT NULL,
+        "restaurant" text NOT NULL DEFAULT '',
         "created_at" timestamptz NOT NULL DEFAULT now()
       )`);
     })();
   }
   return chatLeadsPromise;
+}
+
+let restaurantColPromise: Promise<void> | null = null;
+
+/** Adds the restaurant column on existing installs (table may predate it). */
+export function ensureLeadRestaurantColumn(): Promise<void> {
+  if (!restaurantColPromise) {
+    restaurantColPromise = (async () => {
+      await ensureChatLeadsTable();
+      const { rows } = await pool.query(
+        "select 1 from information_schema.columns where table_schema='public' and table_name='chat_leads' and column_name='restaurant'",
+      );
+      if (rows.length > 0) return;
+      await pool.query(`ALTER TABLE "chat_leads" ADD COLUMN IF NOT EXISTS "restaurant" text NOT NULL DEFAULT ''`);
+    })();
+  }
+  return restaurantColPromise;
 }
 
 /** Keep exactly one leading "+" and digits; require 7–15 digit length. */

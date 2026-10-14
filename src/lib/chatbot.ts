@@ -46,6 +46,12 @@ type Dict = {
   phoneInvalid: string;
   leadThanks: (name: string) => string;
   skipChip: string;
+  askRestaurant: string;
+  niceRestaurant: (r: string, name: string) => string;
+  trialAsk: string;
+  trialYesChip: string;
+  trialNoChip: string;
+  goodbye: (name: string) => string;
   title: string;
   subtitle: string;
   inputPlaceholder: string;
@@ -76,6 +82,12 @@ const D: Record<ChatLang, Dict> = {
     leadThanks: (n) =>
       `All set, ${n}! 🎉 Our team will WhatsApp you soon. Meanwhile, tap below and start your free trial right now — takes 5 minutes:`,
     skipChip: "Skip",
+    askRestaurant: "Awesome! What's your restaurant's name? 🏪",
+    niceRestaurant: (r, n) => `"${r}" — great name! 😊 Which city/area is it located in?`,
+    trialAsk: "One last thing — want a FREE trial? 🎉",
+    trialYesChip: "Yes, start my free trial 🎉",
+    trialNoChip: "Not now, thanks",
+    goodbye: (n) => `Thank you, ${n}! 🙌 Our team will contact you shortly. Have a great day!`,
     pricing: "Pricing",
     trial: "Start free trial",
     trialReply:
@@ -123,6 +135,12 @@ const D: Record<ChatLang, Dict> = {
     leadThanks: (n) =>
       `${n}، سب تیار! 🎉 ہماری ٹیم جلد WhatsApp کرے گی۔ اس دوران نیچے بٹن دبا کر مفت ٹرائل شروع کریں — صرف 5 منٹ:`,
     skipChip: "چھوڑ دیں",
+    askRestaurant: "زبردست! آپ کے ریستوران کا نام کیا ہے؟ 🏪",
+    niceRestaurant: (r, n) => `"${r}" — پیارا نام! 😊 یہ کس شہر/علاقے میں واقع ہے؟`,
+    trialAsk: "آخری بات — کیا آپ مفت ٹرائل چاہتے ہیں؟ 🎉",
+    trialYesChip: "جی ہاں، مفت ٹرائل شروع کریں 🎉",
+    trialNoChip: "ابھی نہیں، شکریہ",
+    goodbye: (n) => `${n}، شکریہ! 🙌 ہماری ٹیم بہت جلد آپ سے رابطہ کرے گی۔ اپنا خیال رکھیے!`,
     pricing: "قیمتیں",
     trial: "مفت ٹرائل شروع کریں",
     trialReply:
@@ -170,6 +188,12 @@ const D: Record<ChatLang, Dict> = {
     leadThanks: (n) =>
       `تم كل شيء يا ${n}! 🎉 سيتواصل معك فريقنا عبر واتساب قريباً. وفي هذه الأثناء اضغط الزر وابدأ تجربتك المجانية الآن — 5 دقائق فقط:`,
     skipChip: "تخطّي",
+    askRestaurant: "رائع! ما اسم مطعمك؟ 🏪",
+    niceRestaurant: (r, n) => `"${r}" — اسم جميل! 😊 في أي مدينة/منطقة يقع؟`,
+    trialAsk: "آخر شيء — هل تريد تجربة مجانية؟ 🎉",
+    trialYesChip: "نعم، ابدأ التجربة المجانية 🎉",
+    trialNoChip: "ليس الآن، شكراً",
+    goodbye: (n) => `شكراً لك يا ${n}! 🙌 سيتواصل معك فريقنا قريباً. نتمنى لك يوماً سعيداً!`,
     pricing: "الأسعار",
     trial: "ابدأ التجربة المجانية",
     trialReply:
@@ -199,11 +223,13 @@ const D: Record<ChatLang, Dict> = {
 export const chatDict = D;
 
 /** Where in the conversation we are (kept client-side, derived from history). */
-export type ChatStep = "name" | "intent" | "country" | "city" | "phone" | "free";
+export type ChatStep = "name" | "intent" | "restaurant" | "country" | "city" | "phone" | "trial" | "free";
 
 const OWNER_RE = /(owner|business|restaurant|cafe|hotel|مالک|صاحب|مالك|مطعم|دکان|ریستوران)/i;
 const CUSTOMER_RE = /(customer|hungry|eat|گاہک|خریدار|عميل|جائع|کھانا)/i;
 const SKIP_RE = /^(skip|چھوڑ دیں|تخطّي|no|نہیں|لا)$/i;
+const NO_RE = /^(no|nope|not now|نہیں|لا|ابھی نہیں|ليس الآن)/i;
+const YES_RE = /(yes|yeah|yup|sure|ok|han|haan|جی|ہاں|نعم|ايوه|start|trial|ٹریل|تجربة)/i;
 const PHONEISH = /^[+()\d][\d\s().-]{5,22}$/;
 
 const PRICEISH = /(price|pricing|cost|fee|payment|plan|قیمت|قیمتیں|سست|پلان|رس|سعر|أسعار|خطة)/i;
@@ -241,7 +267,8 @@ export function botReply(
   step: ChatStep,
   userText: string,
   name: string,
-): { messages: ChatMessage[]; next: ChatStep; wantCity?: string; doneSearch?: boolean; validPhone?: string } {
+  kind: "owner" | "customer" | null = null,
+): { messages: ChatMessage[]; next: ChatStep; wantCity?: string; doneSearch?: boolean; validPhone?: string; restaurant?: string } {
   const d = D[lang];
   const text = userText.trim();
   const low = text.toLowerCase();
@@ -255,20 +282,34 @@ export function botReply(
   }
   if (step === "intent") {
     if (OWNER_RE.test(text) && !CUSTOMER_RE.test(text)) {
-      return { messages: [{ from: "bot", text: d.askPhone }], next: "phone" };
+      return { messages: [{ from: "bot", text: d.askRestaurant }], next: "restaurant" };
     }
     return { messages: [{ from: "bot", text: d.askCountry }], next: "country" };
   }
+  if (step === "restaurant") {
+    const r = text.slice(0, 40);
+    return { messages: [{ from: "bot", text: d.niceRestaurant(r, name || "friend") }], next: "city", restaurant: r };
+  }
   if (step === "phone") {
-    if (SKIP_RE.test(low)) return { messages: [{ from: "bot", text: d.fallback }], next: "free" };
+    if (SKIP_RE.test(low)) return { messages: [{ from: "bot", text: d.goodbye(name || "friend") }], next: "free" };
     if (!PHONEISH.test(text)) return { messages: [{ from: "bot", text: d.phoneInvalid }], next: "phone" };
-    // Valid number — the UI persists this as the lead, bot thanks them.
-    return { messages: [{ from: "bot", text: d.leadThanks(name || "friend") }], next: "free", validPhone: text };
+    // Valid number — stored as the lead. Ask about the free trial next; the
+    // conversation ENDS right after their answer (no customer-style chips).
+    return { messages: [{ from: "bot", text: d.leadThanks(name || "friend") }, { from: "bot", text: d.trialAsk }], next: "trial", validPhone: text };
+  }
+  if (step === "trial") {
+    if (YES_RE.test(low) && !NO_RE.test(low)) {
+      return { messages: [{ from: "bot", text: d.trialReply }], next: "free" };
+    }
+    return { messages: [{ from: "bot", text: d.goodbye(name || "friend") }], next: "free" };
   }
   if (step === "country") {
     return { messages: [{ from: "bot", text: D[lang].askCity }], next: "city" };
   }
   if (step === "city") {
+    if (kind === "owner") {
+      return { messages: [{ from: "bot", text: d.askPhone }], next: "phone" };
+    }
     return {
       messages: [{ from: "bot", text: d.searching(text) }],
       next: "free",

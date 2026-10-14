@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { chatLeads } from "@/db/schema";
-import { ensureChatLeadsTable, normalizeLeadPhone } from "@/lib/chat-leads";
+import { ensureChatLeadsTable, ensureLeadRestaurantColumn, normalizeLeadPhone } from "@/lib/chat-leads";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +42,10 @@ export async function POST(request: Request) {
   const name = clip(body.name, 60);
   const country = clip(body.country, 60);
   const city = clip(body.city, 60);
+  const restaurant = clip(body.restaurant, 60);
 
   await ensureChatLeadsTable();
-  await db.insert(chatLeads).values({ name, kind, country, city, phone });
+  await ensureLeadRestaurantColumn();
+  await db.insert(chatLeads).values({ name, kind, country, city, phone, restaurant });
   return NextResponse.json({ ok: true });
 }

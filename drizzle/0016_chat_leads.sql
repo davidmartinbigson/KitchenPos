@@ -8,3 +8,4 @@ CREATE TABLE IF NOT EXISTS "chat_leads" (
   "phone" text NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE "chat_leads" ADD COLUMN IF NOT EXISTS "restaurant" text NOT NULL DEFAULT '';

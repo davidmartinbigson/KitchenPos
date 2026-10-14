@@ -119,6 +119,8 @@ export const chatLeads = pgTable("chat_leads", {
   city: text("city").notNull().default(""),
   /** Normalized WhatsApp digits (validated 7–15 chars). */
   phone: text("phone").notNull(),
+  /** Owner leads: their restaurant's name. */
+  restaurant: text("restaurant").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
