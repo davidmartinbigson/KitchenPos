@@ -318,8 +318,11 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
       <nav
         className={cn(
           "fixed inset-x-3 bottom-3 z-30 grid gap-1 rounded-3xl border border-white/70 bg-white/90 p-2 shadow-2xl shadow-slate-900/10 backdrop-blur-xl lg:hidden",
-          mobileItems.length === 1 ? "grid-cols-2" : "grid-cols-5",
         )}
+        style={{
+          // Auto-fit: 1 item (+logout) = 2 cols, 4 items = 4 cols, 5 items = 5 cols.
+          gridTemplateColumns: `repeat(${mobileItems.length === 1 ? 2 : mobileItems.length}, minmax(0, 1fr))`,
+        }}
       >
         {mobileItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
