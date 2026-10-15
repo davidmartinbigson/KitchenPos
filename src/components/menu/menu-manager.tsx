@@ -456,7 +456,7 @@ export function MenuManager({
           </AnimatePresence>
         </motion.div>
       ) : (
-        <div className="space-y-2.5">
+        <div className={cn("grid gap-2 sm:gap-2.5", filtered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
           <AnimatePresence mode="popLayout">
             {filtered.map((item, i) => (
               <motion.div
@@ -466,9 +466,9 @@ export function MenuManager({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 14 }}
                 transition={{ delay: Math.min(i * 0.02, 0.25), duration: 0.3 }}
-                className="flex items-center gap-3 rounded-3xl bg-white p-3 shadow-[0_6px_24px_-12px_rgba(15,23,42,0.2)] ring-1 ring-slate-100 transition hover:shadow-md hover:ring-orange-200"
+                className="flex items-center gap-2 rounded-3xl bg-white p-2 shadow-[0_6px_24px_-12px_rgba(15,23,42,0.2)] ring-1 ring-slate-100 transition hover:shadow-md hover:ring-orange-200 sm:gap-3 sm:p-3"
               >
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100">
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-16 sm:w-16">
                   {item.imageData ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.imageData} alt={item.name} className="h-full w-full object-cover" />
@@ -483,16 +483,16 @@ export function MenuManager({
                       {item.category}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-slate-500">{item.description || "—"}</p>
+                  <p className="mt-0.5 hidden truncate text-xs text-slate-500 sm:block">{item.description || "—"}</p>
                 </div>
-                <span className="shrink-0 rounded-2xl bg-slate-950/85 px-3 py-1.5 text-sm font-black text-white shadow">
+                <span className="shrink-0 rounded-2xl bg-slate-950/85 px-2 py-1 text-xs font-black text-white shadow sm:px-3 sm:py-1.5 sm:text-sm">
                   {money(item.price)}
                 </span>
                 <button
                   onClick={() => toggleAvailable(item)}
                   title={item.available ? M.available : M.unavailable}
                   className={cn(
-                    "shrink-0 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition",
+                    "shrink-0 flex items-center gap-2 rounded-full px-2 py-1.5 text-xs font-bold ring-1 transition sm:px-3",
                     item.available
                       ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100"
                       : "bg-slate-100 text-slate-500 ring-slate-200 hover:bg-slate-200",
@@ -514,14 +514,14 @@ export function MenuManager({
                   <button
                     onClick={() => openEdit(item)}
                     aria-label={t.edit}
-                    className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-orange-100 hover:text-orange-700"
+                    className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-orange-100 hover:text-orange-700 sm:h-9 sm:w-9"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setDeleteTarget(item)}
                     aria-label={t.delete}
-                    className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-red-100 hover:text-red-600"
+                    className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-red-100 hover:text-red-600 sm:h-9 sm:w-9"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

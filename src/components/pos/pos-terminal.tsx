@@ -1059,7 +1059,7 @@ export function PosTerminal({
                 </AnimatePresence>
               </motion.div>
             ) : (
-              <div className="space-y-2">
+              <div className={cn("grid gap-2 sm:gap-2.5", filtered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                 <AnimatePresence mode="popLayout">
                   {filtered.map((item, i) => {
                     const qty = cart[item.id] ?? 0;
@@ -1076,12 +1076,12 @@ export function PosTerminal({
                         onClick={() => item.available && !soldOut && addItem(String(item.id))}
                         disabled={!item.available || soldOut}
                         className={cn(
-                          "flex w-full items-center gap-3 rounded-2xl bg-white p-2.5 text-start shadow-[0_4px_20px_-10px_rgba(15,23,42,0.2)] ring-1 transition",
+                          "flex w-full items-center gap-2 rounded-2xl bg-white p-2 text-start shadow-[0_4px_20px_-10px_rgba(15,23,42,0.2)] ring-1 transition sm:gap-3 sm:p-2.5",
                           qty > 0 ? "ring-2 ring-orange-400" : "ring-slate-100",
                           item.available ? "hover:shadow-md hover:ring-orange-200" : "opacity-50 grayscale",
                         )}
                       >
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100">
+                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-14 sm:w-14">
                           {item.imageData ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={item.imageData} alt={item.name} className="h-full w-full object-cover" />
@@ -1117,7 +1117,7 @@ export function PosTerminal({
                             )}
                           </div>
                         </div>
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 text-lg font-black text-white shadow-md">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 text-base font-black text-white shadow-md sm:h-9 sm:w-9 sm:text-lg">
                           +
                         </span>
                       </motion.button>
