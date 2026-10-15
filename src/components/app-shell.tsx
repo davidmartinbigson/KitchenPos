@@ -218,7 +218,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
           )}
           <button
             onClick={logout}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
           >
             <LogOut className="h-4 w-4 rtl:rotate-180" /> {t.logout}
           </button>
@@ -282,7 +282,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
               )}
               <button
                 onClick={logout}
-                className="mt-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-200"
+                className="mt-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-red-600 ring-1 ring-red-200"
               >
                 <LogOut className="h-4 w-4" /> {t.logout}
               </button>
@@ -344,7 +344,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
         {mobileItems.length === 1 && (
           <button
             onClick={logout}
-            className="flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-bold text-rose-500"
+            className="flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-bold text-red-500"
           >
             <LogOut className="h-5 w-5" />
             {t.logout}

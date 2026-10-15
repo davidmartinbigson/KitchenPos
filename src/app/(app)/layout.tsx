@@ -64,7 +64,7 @@ function WithDashTheme({ raw, children }: { raw: unknown; children: ReactNode })
   return (
     <div
       data-accent
-      style={{ "--dash-accent": t.accent, display: "contents" } as CSSProperties}
+      style={{ "--dash-accent": t.accent, "--dash-tail": t.tail, display: "contents" } as CSSProperties}
     >
       {children}
     </div>

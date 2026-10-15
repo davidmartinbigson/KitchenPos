@@ -181,7 +181,7 @@ export function KitchenDisplay({
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="pointer-events-none fixed inset-0 opacity-60">
         <div className="absolute -top-24 left-10 h-96 w-96 animate-blob rounded-full bg-orange-600/20 blur-3xl" />
-        <div className="absolute bottom-0 right-10 h-96 w-96 animate-blob rounded-full bg-rose-600/15 blur-3xl [animation-delay:-8s]" />
+        <div className="absolute bottom-0 right-10 h-96 w-96 animate-blob rounded-full bg-red-600/15 blur-3xl [animation-delay:-8s]" />
       </div>
 
       {/* Header */}
@@ -230,7 +230,7 @@ export function KitchenDisplay({
           <button
             onClick={logout}
             title={t.logout}
-            className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-rose-300 ring-1 ring-white/10 transition hover:bg-rose-500/20"
+            className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-red-300 ring-1 ring-white/10 transition hover:bg-rose-500/20"
           >
             <LogOut className="h-5 w-5 rtl:rotate-180" />
           </button>
@@ -272,7 +272,7 @@ export function KitchenDisplay({
                         className={cn(
                           "rounded-2xl border p-4 shadow-xl",
                           late
-                            ? "border-rose-400/50 bg-rose-500/10"
+                            ? "border-red-400/50 bg-rose-500/10"
                             : column.key === "new"
                               ? "border-sky-400/30 bg-sky-500/[0.07]"
                               : column.key === "preparing"
@@ -294,7 +294,7 @@ export function KitchenDisplay({
                               </span>
                             )}
                           </div>
-                          <span className={cn("flex shrink-0 items-center gap-1 text-xs font-bold", late ? "text-rose-300" : "text-slate-400")}>
+                          <span className={cn("flex shrink-0 items-center gap-1 text-xs font-bold", late ? "text-red-300" : "text-slate-400")}>
                             <AlarmClock className="h-3.5 w-3.5" />
                             {mins === 0 ? K.justNow : `${formatNumber(mins, lang)} ${K.min}`}
                             {late && ` · ${K.late}`}

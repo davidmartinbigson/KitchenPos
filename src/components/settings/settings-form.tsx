@@ -73,6 +73,7 @@ export function SettingsForm({
   const [customText, setCustomText] = useState<"dark" | "light">(initial.menuTheme?.custom?.text ?? "dark");
   const [dashOn, setDashOn] = useState(initial.dashTheme?.enabled === true);
   const [dashAccent, setDashAccent] = useState(initial.dashTheme?.accent ?? "#ea580c");
+  const [dashTail, setDashTail] = useState(initial.dashTheme?.tail ?? "#f43f5e");
 
   function addPaymentMethod() {
     const name = pmInput.trim().slice(0, 24);
@@ -137,7 +138,7 @@ export function SettingsForm({
             layout: menuLayout,
             custom: { enabled: customOn, accent: customAccent, bg: customBg, text: customText },
           },
-          dashTheme: { enabled: dashOn, accent: dashAccent },
+          dashTheme: { enabled: dashOn, accent: dashAccent, tail: dashTail },
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -369,27 +370,40 @@ export function SettingsForm({
             </h2>
             <p className="mb-5 text-sm text-slate-500">{t.settings.dashThemeDesc}</p>
             <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 {DASH_PRESETS.map((p) => (
                   <button
                     type="button"
-                    key={p.hex}
+                    key={p.accent}
                     title={p.label}
-                    onClick={() => setDashAccent(p.hex)}
+                    onClick={() => { setDashAccent(p.accent); setDashTail(p.tail); }}
                     className={cn(
-                      "h-9 w-9 rounded-xl shadow-sm ring-offset-2 transition hover:scale-110",
-                      dashAccent === p.hex ? "ring-4 ring-slate-900 scale-105" : "ring-1 ring-slate-200",
+                      "h-9 w-12 rounded-xl shadow-sm ring-offset-2 transition hover:scale-110",
+                      dashAccent === p.accent && dashTail === p.tail ? "ring-4 ring-slate-900 scale-105" : "ring-1 ring-slate-200",
                     )}
-                    style={{ backgroundColor: p.hex }}
+                    style={{ backgroundImage: `linear-gradient(135deg, ${p.accent} 0%, ${p.tail} 100%)` }}
                   />
                 ))}
-                <input
-                  type="color"
-                  value={dashAccent}
-                  onChange={(e) => setDashAccent(e.target.value)}
-                  className="h-9 w-14 cursor-pointer rounded-xl border border-slate-200 bg-white"
-                  title="#hex"
-                />
+                <label className="flex items-center gap-1.5 rounded-xl bg-white px-2 py-1 ring-1 ring-slate-200">
+                  <span className="text-[10px] font-black uppercase text-slate-400">1</span>
+                  <input
+                    type="color"
+                    value={dashAccent}
+                    onChange={(e) => setDashAccent(e.target.value)}
+                    className="h-7 w-9 cursor-pointer rounded-lg border border-slate-200 bg-white"
+                    title={t.settings.accentLabel}
+                  />
+                </label>
+                <label className="flex items-center gap-1.5 rounded-xl bg-white px-2 py-1 ring-1 ring-slate-200">
+                  <span className="text-[10px] font-black uppercase text-slate-400">2</span>
+                  <input
+                    type="color"
+                    value={dashTail}
+                    onChange={(e) => setDashTail(e.target.value)}
+                    className="h-7 w-9 cursor-pointer rounded-lg border border-slate-200 bg-white"
+                    title={t.settings.dashTailLabel}
+                  />
+                </label>
               </div>
               <button
                 type="button"
@@ -410,7 +424,7 @@ export function SettingsForm({
             <p className="mb-2 mt-5 text-xs font-black uppercase tracking-wider text-slate-400">{t.settings.dashPreview}</p>
             <div
               data-accent
-              style={{ "--dash-accent": dashAccent } as React.CSSProperties}
+              style={{ "--dash-accent": dashAccent, "--dash-tail": dashTail } as React.CSSProperties}
               className="flex flex-wrap items-center gap-2.5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"
             >
               <span className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2 text-sm font-bold text-white shadow-sm">
@@ -751,7 +765,7 @@ export function SettingsForm({
             <button
               type="button"
               onClick={logout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 ring-1 ring-red-200 transition hover:bg-red-100"
             >
               <LogOut className="h-4 w-4 rtl:rotate-180" /> {t.logout}
             </button>

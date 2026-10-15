@@ -123,7 +123,7 @@ export function DemoShell({ active, onNavigate, children }: { active: DemoTab; o
           </div>
           <button
             onClick={resetDemo}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
           >
             <RotateCcw className="h-4 w-4" /> Reset demo
           </button>
@@ -183,7 +183,7 @@ export function DemoShell({ active, onNavigate, children }: { active: DemoTab; o
               <NavLinks onNavigateTab={() => setMobileOpen(false)} />
               <button
                 onClick={resetDemo}
-                className="mt-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-200"
+                className="mt-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-red-600 ring-1 ring-red-200"
               >
                 <LogOut className="h-4 w-4" /> Reset demo
               </button>

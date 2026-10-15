@@ -84,7 +84,7 @@ export function DemoKitchen() {
                           </span>
                         )}
                       </div>
-                      <span className={`shrink-0 text-[11px] font-bold ${o.mins >= 10 ? "text-rose-300" : "text-slate-400"}`}>
+                      <span className={`shrink-0 text-[11px] font-bold ${o.mins >= 10 ? "text-red-300" : "text-slate-400"}`}>
                         ⏱ {o.mins}m
                       </span>
                     </div>

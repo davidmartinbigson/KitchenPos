@@ -288,7 +288,7 @@ export function DemoMenu({
                 </button>
               </div>
               {it.available !== false && it.stockQty != null && it.stockQty <= 0 && (
-                <span className="mt-2 inline-block rounded bg-rose-100 px-2 py-0.5 text-[11px] font-black text-rose-700">Sold out</span>
+                <span className="mt-2 inline-block rounded bg-red-100 px-2 py-0.5 text-[11px] font-black text-red-700">Sold out</span>
               )}
             </div>
           ))}

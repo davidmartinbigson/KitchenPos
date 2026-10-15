@@ -95,7 +95,7 @@ export function BranchSwitcher({ dropdownClass = "" }: { dropdownClass?: string 
           {data.used}/{data.limit}
         </span>
       </div>
-      {error && <p className="mt-1 px-1 text-[11px] font-bold text-rose-600">{error}</p>}
+      {error && <p className="mt-1 px-1 text-[11px] font-bold text-red-600">{error}</p>}
     </div>
   );
 }

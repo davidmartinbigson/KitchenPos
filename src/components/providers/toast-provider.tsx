@@ -16,7 +16,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const toneStyles: Record<Tone, string> = {
   success: "bg-emerald-600 text-white",
-  error: "bg-rose-600 text-white",
+  error: "bg-red-600 text-white",
   info: "bg-slate-900 text-white",
 };
 

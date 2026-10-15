@@ -607,7 +607,7 @@ export function PosTerminal({
                             <p className="text-sm font-black text-slate-900">{formatNumber(line.lineTotal, lang)}</p>
                             <button
                               onClick={() => removeLine(line.key)}
-                              className="text-[11px] font-semibold text-rose-500 hover:underline"
+                              className="text-[11px] font-semibold text-red-500 hover:underline"
                             >
                               {P.remove}
                             </button>
@@ -774,20 +774,20 @@ export function PosTerminal({
                       ? "bg-slate-50 ring-slate-200"
                       : enoughCash
                         ? "bg-emerald-50 ring-emerald-200"
-                        : "bg-rose-50 ring-rose-200",
+                        : "bg-red-50 ring-red-200",
                   )}
                 >
                   <div className="flex items-center gap-2.5">
                     {enoughCash || lines.length === 0 ? (
                       <CheckCircle2 className="h-6 w-6 text-emerald-600" />
                     ) : (
-                      <AlertTriangle className="h-6 w-6 text-rose-500" />
+                      <AlertTriangle className="h-6 w-6 text-red-500" />
                     )}
                     <div>
                       <p
                         className={cn(
                           "text-sm font-semibold",
-                          enoughCash || lines.length === 0 ? "text-emerald-700" : "text-rose-600",
+                          enoughCash || lines.length === 0 ? "text-emerald-700" : "text-red-600",
                         )}
                       >
                         {enoughCash ? P.change : P.balanceDue}
@@ -803,7 +803,7 @@ export function PosTerminal({
                     animate={{ scale: 1, opacity: 1 }}
                     className={cn(
                       "text-2xl font-black tracking-tight",
-                      enoughCash || lines.length === 0 ? "text-emerald-700" : "text-rose-600",
+                      enoughCash || lines.length === 0 ? "text-emerald-700" : "text-red-600",
                     )}
                   >
                     {enoughCash ? money(change) : money(balance)}
@@ -978,7 +978,7 @@ export function PosTerminal({
                             </span>
                           )}
                           {soldOut && (
-                            <span className="absolute end-2 bottom-2 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                            <span className="absolute end-2 bottom-2 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white">
                               {P.soldOut}
                             </span>
                           )}

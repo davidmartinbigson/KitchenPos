@@ -141,7 +141,7 @@ export function ActivateView({
               <motion.p
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-200"
+                className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 ring-1 ring-red-200"
               >
                 {error}
               </motion.p>
@@ -157,7 +157,7 @@ export function ActivateView({
 
         <button
           onClick={logout}
-          className="mx-auto mt-6 flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-rose-600"
+          className="mx-auto mt-6 flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-red-600"
         >
           <LogOut className="h-4 w-4 rtl:rotate-180" /> {t.logout}
         </button>

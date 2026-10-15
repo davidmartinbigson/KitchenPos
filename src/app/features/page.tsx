@@ -91,7 +91,7 @@ export default function FeaturesPage() {
       {/* ambient background */}
       <div aria-hidden className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 -left-40 h-[480px] w-[480px] rounded-full bg-orange-600/25 blur-[120px]" style={{ animation: "floaty 9s ease-in-out infinite" }} />
-        <div className="absolute top-1/3 -right-52 h-[520px] w-[520px] rounded-full bg-rose-600/20 blur-[130px]" style={{ animation: "floaty 12s ease-in-out infinite" }} />
+        <div className="absolute top-1/3 -right-52 h-[520px] w-[520px] rounded-full bg-red-600/20 blur-[130px]" style={{ animation: "floaty 12s ease-in-out infinite" }} />
         <div className="absolute -bottom-48 left-1/4 h-[420px] w-[420px] rounded-full bg-amber-500/15 blur-[120px]" style={{ animation: "floaty 11s ease-in-out infinite" }} />
       </div>
 

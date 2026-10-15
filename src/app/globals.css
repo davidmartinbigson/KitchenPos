@@ -473,4 +473,15 @@ input[type="number"] {
   --color-orange-800: color-mix(in srgb, var(--dash-accent) 62%, black);
   --color-orange-900: color-mix(in srgb, var(--dash-accent) 48%, black);
   --color-orange-950: color-mix(in srgb, var(--dash-accent) 36%, black);
+  --color-rose-50: color-mix(in srgb, var(--dash-tail) 6%, white);
+  --color-rose-100: color-mix(in srgb, var(--dash-tail) 12%, white);
+  --color-rose-200: color-mix(in srgb, var(--dash-tail) 22%, white);
+  --color-rose-300: color-mix(in srgb, var(--dash-tail) 35%, white);
+  --color-rose-400: color-mix(in srgb, var(--dash-tail) 58%, white);
+  --color-rose-500: var(--dash-tail);
+  --color-rose-600: color-mix(in srgb, var(--dash-tail) 88%, black);
+  --color-rose-700: color-mix(in srgb, var(--dash-tail) 75%, black);
+  --color-rose-800: color-mix(in srgb, var(--dash-tail) 62%, black);
+  --color-rose-900: color-mix(in srgb, var(--dash-tail) 48%, black);
+  --color-rose-950: color-mix(in srgb, var(--dash-tail) 36%, black);
 }

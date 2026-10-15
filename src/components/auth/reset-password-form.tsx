@@ -78,7 +78,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <Card className="mt-8 p-6 sm:p-8">
           {!token ? (
             <div className="space-y-4 text-center">
-              <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-200">
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 ring-1 ring-red-200">
                 {R.invalidLink}
               </p>
               <Link href="/login" className="inline-block font-bold text-orange-600 hover:underline">
@@ -128,7 +128,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
                 <motion.p
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-200"
+                  className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 ring-1 ring-red-200"
                 >
                   {error}
                 </motion.p>

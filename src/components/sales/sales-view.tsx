@@ -848,11 +848,11 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
                           </span>
                         </div>
                         <div className="text-end">
-                          <p className={cn("font-black", order.voidedAt ? "text-rose-400 line-through" : "text-slate-900")}>
+                          <p className={cn("font-black", order.voidedAt ? "text-red-400 line-through" : "text-slate-900")}>
                             {money(order.total)}
                           </p>
                           {order.voidedAt ? (
-                            <p className="text-[11px] font-black uppercase tracking-wide text-rose-600">{S.voided}</p>
+                            <p className="text-[11px] font-black uppercase tracking-wide text-red-600">{S.voided}</p>
                           ) : (
                             <p className="text-[11px] font-semibold text-emerald-600">
                               {S.change}: {money(order.changeDue)}
@@ -864,7 +864,7 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
                                 e.stopPropagation();
                                 voidOrder(order.id);
                               }}
-                              className="mt-1 rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-rose-500 ring-1 ring-rose-200 transition hover:bg-rose-50"
+                              className="mt-1 rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-red-500 ring-1 ring-red-200 transition hover:bg-red-50"
                             >
                               {S.voidAction}
                             </button>

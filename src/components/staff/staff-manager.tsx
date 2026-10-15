@@ -418,7 +418,7 @@ export function StaffManager({ suggestions }: { suggestions: string[] }) {
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
               {t.cancel}
             </Button>
-            <Button className="!bg-rose-600 !text-white" loading={deleting} onClick={confirmDelete}>
+            <Button className="!bg-red-600 !text-white" loading={deleting} onClick={confirmDelete}>
               <Trash2 className="h-4 w-4" /> {t.delete}
             </Button>
           </div>

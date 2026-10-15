@@ -247,7 +247,7 @@ export function MenuManager({
             className={cn(
               "flex h-13 items-center rounded-2xl px-4 text-xs font-bold ring-1",
               items.length >= itemLimit
-                ? "bg-rose-50 text-rose-600 ring-rose-200"
+                ? "bg-red-50 text-red-600 ring-red-200"
                 : items.length >= itemLimit * 0.9
                   ? "bg-amber-50 text-amber-700 ring-amber-200"
                   : "bg-white text-slate-600 ring-slate-200",
@@ -404,7 +404,7 @@ export function MenuManager({
                         <button
                           onClick={() => setDeleteTarget(item)}
                           aria-label={t.delete}
-                          className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-rose-100 hover:text-rose-600"
+                          className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-red-100 hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -479,7 +479,7 @@ export function MenuManager({
               <button
                 type="button"
                 onClick={() => setForm((p) => ({ ...p, imageData: null }))}
-                className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:underline"
+                className="flex items-center gap-1.5 text-xs font-bold text-red-600 hover:underline"
               >
                 <X className="h-3.5 w-3.5" /> {M.removeImage}
               </button>
@@ -629,7 +629,7 @@ export function MenuManager({
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
               {t.cancel}
             </Button>
-            <Button variant="danger" className="!bg-rose-600 !text-white hover:!bg-rose-700" loading={deleting} onClick={confirmDelete}>
+            <Button variant="danger" className="!bg-red-600 !text-white hover:!bg-red-700" loading={deleting} onClick={confirmDelete}>
               <Trash2 className="h-4 w-4" /> {t.delete}
             </Button>
           </div>

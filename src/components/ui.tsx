@@ -25,7 +25,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary:
     "bg-white text-slate-800 ring-1 ring-slate-200 shadow-sm hover:bg-slate-50 hover:ring-slate-300",
   ghost: "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900",
-  danger: "bg-rose-50 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-100",
+  danger: "bg-red-50 text-red-600 ring-1 ring-red-200 hover:bg-red-100",
   success:
     "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 hover:brightness-110",
 };
@@ -250,7 +250,7 @@ export function Badge({
   const tones = {
     orange: "bg-orange-100 text-orange-700",
     green: "bg-emerald-100 text-emerald-700",
-    red: "bg-rose-100 text-rose-700",
+    red: "bg-red-100 text-red-700",
     slate: "bg-slate-100 text-slate-600",
     blue: "bg-sky-100 text-sky-700",
   };

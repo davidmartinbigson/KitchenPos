@@ -442,7 +442,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                         setDeleteLeadTarget(lead);
                       }}
                       aria-label={A.leadDeleteTitle}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-200 transition hover:bg-red-100"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -653,7 +653,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                                   key={b.id}
                                   className={cn(
                                     "flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ring-1",
-                                    b.suspended ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-slate-50 text-slate-700 ring-slate-200",
+                                    b.suspended ? "bg-red-50 text-red-700 ring-red-200" : "bg-slate-50 text-slate-700 ring-slate-200",
                                   )}
                                 >
                                   🏬 {b.shopName}
@@ -670,7 +670,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                                     <button
                                       onClick={() => customerAction(b.id, { action: "suspend" })}
                                       disabled={busyId === b.id}
-                                      className="ms-1 rounded bg-rose-600 px-1.5 py-0.5 text-[9px] font-black text-white disabled:opacity-40"
+                                      className="ms-1 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-black text-white disabled:opacity-40"
                                     >
                                       {A.suspend}
                                     </button>
@@ -715,7 +715,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                             <Button size="sm" variant="danger" disabled={busyId === c.id} onClick={() => customerAction(c.id, { action: "revokeAccess" })}>
                               <ShieldX className="h-4 w-4" /> {A.cutAccess}
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-rose-600" disabled={busyId === c.id} onClick={() => setDeleteTarget(c)}>
+                            <Button size="sm" variant="ghost" className="text-red-600" disabled={busyId === c.id} onClick={() => setDeleteTarget(c)}>
                               <Trash2 className="h-4 w-4" /> {A.deleteCustomer}
                             </Button>
                           </div>
@@ -833,7 +833,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
                                     {k.revoked ? A.unrevoke : A.revoke}
                                   </Button>
                                   {!used && (
-                                    <Button size="sm" variant="ghost" className="text-rose-600" onClick={() => deleteKey(k)}>
+                                    <Button size="sm" variant="ghost" className="text-red-600" onClick={() => deleteKey(k)}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   )}
@@ -1015,7 +1015,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
               {t.cancel}
             </Button>
-            <Button className="!bg-rose-600 !text-white" onClick={deleteCustomer}>
+            <Button className="!bg-red-600 !text-white" onClick={deleteCustomer}>
               <Trash2 className="h-4 w-4" /> {t.delete}
             </Button>
           </div>
@@ -1036,7 +1036,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
           <div className="flex flex-wrap justify-between gap-3">
             <Button
               variant="ghost"
-              className="text-rose-600"
+              className="text-red-600"
               onClick={() => {
                 setDeleteLeadTarget(selectedLead);
               }}
@@ -1103,7 +1103,7 @@ export function AdminPanel({ adminName, adminEmail }: { adminName: string; admin
             <Button variant="secondary" onClick={() => setDeleteLeadTarget(null)}>
               {t.cancel}
             </Button>
-            <Button className="!bg-rose-600 !text-white" onClick={deleteLead} disabled={leadBusy}>
+            <Button className="!bg-red-600 !text-white" onClick={deleteLead} disabled={leadBusy}>
               <Trash2 className="h-4 w-4" /> {t.delete}
             </Button>
           </div>

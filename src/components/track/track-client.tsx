@@ -222,7 +222,7 @@ export function TrackClient({
                         {ratingState === "sending" ? "Sending…" : "Send rating"}
                       </button>
                       {ratingState === "failed" && (
-                        <p className="mt-2 text-xs font-semibold text-rose-600">Could not send — try again in a moment.</p>
+                        <p className="mt-2 text-xs font-semibold text-red-600">Could not send — try again in a moment.</p>
                       )}
                     </>
                   )}

@@ -91,7 +91,7 @@ export function BranchesSettings() {
               <span className="text-lg">🏬</span>
               <span className="min-w-0 flex-1 truncate text-sm font-black text-slate-800">{b.shopName}</span>
               {b.suspended ? (
-                <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-black text-rose-700">
+                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-black text-red-700">
                   {t.branches.suspended}
                 </span>
               ) : b.online ? (
@@ -140,7 +140,7 @@ export function BranchesSettings() {
               <Plus className="h-4 w-4" /> {busy ? t.branches.creating : t.branches.create}
             </button>
           </div>
-          {error && <p className="mt-2 text-xs font-bold text-rose-600">{error}</p>}
+          {error && <p className="mt-2 text-xs font-bold text-red-600">{error}</p>}
           {done && <p className="mt-2 text-xs font-bold text-emerald-600">{done}</p>}
         </div>
       ) : (
