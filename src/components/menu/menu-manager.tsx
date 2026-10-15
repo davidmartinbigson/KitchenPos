@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -12,6 +12,8 @@ import {
   Trash2,
   UtensilsCrossed,
   X,
+  LayoutGrid,
+  List,
   Layers,
   CircleDollarSign,
   CheckCircle2,
@@ -70,6 +72,17 @@ export function MenuManager({
   const [items, setItems] = useState<MenuItemDTO[]>(initialItems);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [itemView, setItemView] = useState<"grid" | "list">("grid");
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem("kpos-menumgr-view");
+      if (v === "grid" || v === "list") setItemView(v);
+    } catch {}
+  }, []);
+  const pickView = (v: "grid" | "list") => {
+    setItemView(v);
+    try { window.localStorage.setItem("kpos-menumgr-view", v); } catch {}
+  };
   const [editing, setEditing] = useState<MenuItemDTO | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -297,6 +310,32 @@ export function MenuManager({
           <Search className="pointer-events-none absolute start-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.search} className="ps-12" />
         </div>
+        <div className="flex shrink-0 gap-1 self-end rounded-2xl bg-white p-1 ring-1 ring-slate-200 md:self-auto">
+          <button
+            type="button"
+            title={t.pos.gridView}
+            aria-label={t.pos.gridView}
+            onClick={() => pickView("grid")}
+            className={cn(
+              "grid h-9 w-9 place-items-center rounded-xl transition",
+              itemView === "grid" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-slate-700",
+            )}
+          >
+            <LayoutGrid className="h-4.5 w-4.5" />
+          </button>
+          <button
+            type="button"
+            title={t.pos.listView}
+            aria-label={t.pos.listView}
+            onClick={() => pickView("list")}
+            className={cn(
+              "grid h-9 w-9 place-items-center rounded-xl transition",
+              itemView === "list" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-slate-700",
+            )}
+          >
+            <List className="h-4.5 w-4.5" />
+          </button>
+        </div>
       </div>
       {categories.length > 0 && (
         <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -332,7 +371,7 @@ export function MenuManager({
         />
       ) : filtered.length === 0 ? (
         <p className="py-12 text-center text-slate-500">{t.pos.emptyFilter}</p>
-      ) : (
+      ) : itemView === "grid" ? (
         <motion.div layout className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           <AnimatePresence mode="popLayout">
             {filtered.map((item, i) => (
@@ -416,6 +455,81 @@ export function MenuManager({
             ))}
           </AnimatePresence>
         </motion.div>
+      ) : (
+        <div className="space-y-2.5">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((item, i) => (
+              <motion.div
+                layout
+                key={item.id}
+                initial={{ opacity: 0, x: 14 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 14 }}
+                transition={{ delay: Math.min(i * 0.02, 0.25), duration: 0.3 }}
+                className="flex items-center gap-3 rounded-3xl bg-white p-3 shadow-[0_6px_24px_-12px_rgba(15,23,42,0.2)] ring-1 ring-slate-100 transition hover:shadow-md hover:ring-orange-200"
+              >
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100">
+                  {item.imageData ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageData} alt={item.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="grid h-full w-full place-items-center text-3xl">{item.emoji}</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate font-black text-slate-900">{item.name}</h3>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
+                      {item.category}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">{item.description || "—"}</p>
+                </div>
+                <span className="shrink-0 rounded-2xl bg-slate-950/85 px-3 py-1.5 text-sm font-black text-white shadow">
+                  {money(item.price)}
+                </span>
+                <button
+                  onClick={() => toggleAvailable(item)}
+                  title={item.available ? M.available : M.unavailable}
+                  className={cn(
+                    "shrink-0 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition",
+                    item.available
+                      ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100"
+                      : "bg-slate-100 text-slate-500 ring-slate-200 hover:bg-slate-200",
+                  )}
+                >
+                  <span
+                    className={cn("relative h-4 w-7 rounded-full transition", item.available ? "bg-emerald-500" : "bg-slate-300")}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all",
+                        item.available ? "start-3.5" : "start-0.5",
+                      )}
+                    />
+                  </span>
+                  <span className="hidden sm:inline">{item.available ? M.available : M.unavailable}</span>
+                </button>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    onClick={() => openEdit(item)}
+                    aria-label={t.edit}
+                    className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-orange-100 hover:text-orange-700"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(item)}
+                    aria-label={t.delete}
+                    className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-red-100 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       )}
 
       <CsvImport
