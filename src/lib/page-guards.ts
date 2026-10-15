@@ -74,6 +74,8 @@ export type KitchenScope = {
   viewerName: string;
   categories: string[];
   shopName: string;
+  /** Owner's add-on flags — the display itself is now an opt-in add-on. */
+  addons: Record<string, unknown>;
 };
 
 /** Kitchen display: chef sees their scoped feed; owner can supervise everything. */
@@ -93,6 +95,7 @@ export async function requireKitchenScope(): Promise<KitchenScope> {
         viewerName: member.name,
         categories: member.categories,
         shopName: session.owner.shopName,
+        addons: session.owner.addons as Record<string, unknown>,
       };
     }
     // Full-control cashier supervises the kitchen like the owner.
@@ -102,6 +105,7 @@ export async function requireKitchenScope(): Promise<KitchenScope> {
       viewerName: member.name,
       categories: [],
       shopName: session.owner.shopName,
+      addons: session.owner.addons as Record<string, unknown>,
     };
   }
 
@@ -111,5 +115,6 @@ export async function requireKitchenScope(): Promise<KitchenScope> {
     viewerName: session.user.name,
     categories: [],
     shopName: session.user.shopName,
+    addons: session.user.addons as Record<string, unknown>,
   };
 }

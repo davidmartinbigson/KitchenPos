@@ -24,6 +24,7 @@ export const ADDON_KEYS = [
   "crm",
   "branches",
   "fullCashier",
+  "kitchenDisplay",
 ] as const;
 
 export type AddonKey = (typeof ADDON_KEYS)[number];
@@ -49,6 +50,7 @@ export const READY_ADDONS: AddonKey[] = [
   "crm",
   "branches",
   "fullCashier",
+  "kitchenDisplay",
 ];
 
 export const ORDER_PAYMENT_METHODS = ["cash", "card", "jazzcash", "easypaisa", "bank"] as const;

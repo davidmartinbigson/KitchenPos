@@ -95,8 +95,17 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
   const isOwner = user.kind === "owner";
   const fullCashier =
     !isOwner && (user as { addons?: Record<string, unknown> }).addons?.fullCashier === true;
-  const navItems = isOwner ? ownerNav : fullCashier ? cashierFullNav : cashierNav;
-  const mobileItems = isOwner ? mobileOwnerNav : fullCashier ? cashierFullMobileNav : cashierNav;
+  // Kitchen display is an opt-in add-on: hide it from navigation when off.
+  const shellAddons = "addons" in user ? (user.addons as Record<string, unknown> | undefined) : undefined;
+  const kitchenOn = shellAddons?.kitchenDisplay === true;
+  const ownerNavItems = kitchenOn ? ownerNav : ownerNav.filter((i) => i.key !== "kitchen");
+  const cashierFullNavItems = kitchenOn ? cashierFullNav : cashierFullNav.filter((i) => i.key !== "kitchen");
+  const mobileOwnerItems = kitchenOn ? mobileOwnerNav : mobileOwnerNav.filter((i) => i.key !== "kitchen");
+  const cashierFullMobileItems = kitchenOn
+    ? cashierFullMobileNav
+    : cashierFullMobileNav.filter((i) => i.key !== "kitchen");
+  const navItems = isOwner ? ownerNavItems : fullCashier ? cashierFullNavItems : cashierNav;
+  const mobileItems = isOwner ? mobileOwnerItems : fullCashier ? cashierFullMobileItems : cashierNav;
 
   // Lazy daily-summary trigger: once per day per device, when the owner opens the app
   // in the evening (server validates the time window + sends only for this owner).
