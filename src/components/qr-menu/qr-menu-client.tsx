@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { compressImage } from "@/lib/format";
 import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
 import { cn } from "@/components/ui";
-import { DEFAULT_MENU_THEME, MENU_PALETTE, type MenuTheme } from "@/lib/menu-theme";
+import { CUSTOM_PALETTE, CUSTOM_THEME_CSS, DEFAULT_MENU_THEME, MENU_PALETTE, type MenuTheme } from "@/lib/menu-theme";
 
 /* Guest menu is standalone (no app i18n): static EN + AR strings, toggled in-page.
    Item names always stay as the restaurant typed them. */
@@ -124,8 +124,16 @@ export function QrMenuClient({
   menuTheme?: MenuTheme;
 }) {
   const theme = menuTheme ?? DEFAULT_MENU_THEME;
-  const pal = MENU_PALETTE[theme.color];
+  const customOn = theme.custom?.enabled === true;
+  const pal = customOn ? CUSTOM_PALETTE : MENU_PALETTE[theme.color];
   const isGrid = theme.layout === "grid";
+  const customVars = customOn
+    ? ({
+        "--m-accent": theme.custom.accent,
+        "--m-bg": theme.custom.bg,
+        "--m-text": theme.custom.text === "light" ? "#f8fafc" : "#0f172a",
+      } as React.CSSProperties)
+    : undefined;
   const [cart, setCart] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [customerName, setCustomerName] = useState(tablePrefill);
@@ -247,7 +255,8 @@ export function QrMenuClient({
 
   if (!active) {
     return (
-      <main dir={isAr ? "rtl" : "ltr"} lang={lang} className={cn("flex min-h-svh items-center justify-center bg-gradient-to-b px-4", pal.pageBg)}>
+      <main dir={isAr ? "rtl" : "ltr"} lang={lang} style={customVars} className={cn("flex min-h-svh items-center justify-center bg-gradient-to-b px-4", pal.pageBg)}>
+        {customOn && <style>{CUSTOM_THEME_CSS}</style>}
         <div className={cn("w-full max-w-sm rounded-3xl border bg-white p-8 text-center shadow-lg", pal.softBorder)}>
           <div className="text-4xl">🍽️</div>
           <h1 className="mt-3 text-xl font-bold text-slate-900">{shopName}</h1>
@@ -338,7 +347,8 @@ export function QrMenuClient({
   }
 
   return (
-    <main dir={isAr ? "rtl" : "ltr"} lang={lang} className={cn("min-h-svh bg-gradient-to-b pb-28", pal.pageBg)}>
+    <main dir={isAr ? "rtl" : "ltr"} lang={lang} style={customVars} className={cn("min-h-svh bg-gradient-to-b pb-28", pal.pageBg)}>
+      {customOn && <style>{CUSTOM_THEME_CSS}</style>}
       {/* Header */}
       <header className={cn("sticky top-0 z-10 border-b bg-white/90 backdrop-blur", pal.softBorder)}>
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
@@ -346,7 +356,7 @@ export function QrMenuClient({
             🍽️
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-bold text-slate-900">{shopName}</h1>
+            <h1 className={cn("truncate text-base font-bold", customOn ? "m-heroText" : "text-slate-900")}>{shopName}</h1>
             <p className="text-xs text-slate-500">
               {t.tagline}
               {tablePrefill ? ` · ${tablePrefill}` : ""}

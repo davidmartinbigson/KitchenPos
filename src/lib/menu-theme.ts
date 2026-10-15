@@ -10,8 +10,21 @@ export type MenuThemeColor = (typeof MENU_THEME_COLORS)[number];
 export const MENU_LAYOUTS = ["list", "grid"] as const;
 export type MenuLayout = (typeof MENU_LAYOUTS)[number];
 
-export type MenuTheme = { color: MenuThemeColor; layout: MenuLayout };
-export const DEFAULT_MENU_THEME: MenuTheme = { color: "orange", layout: "list" };
+/**
+ * Free-customizer layer (accent + page background + text tone) layered over a
+ * preset. `enabled` flips the menu into true white-label mode.
+ */
+export type MenuCustom = { enabled: boolean; accent: string; bg: string; text: "dark" | "light" };
+export const DEFAULT_MENU_CUSTOM: MenuCustom = { enabled: false, accent: "#ea580c", bg: "#fff7ed", text: "dark" };
+
+export type MenuTheme = { color: MenuThemeColor; layout: MenuLayout; custom: MenuCustom };
+export const DEFAULT_MENU_THEME: MenuTheme = { color: "orange", layout: "list", custom: { ...DEFAULT_MENU_CUSTOM } };
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+function sanitizeHex(v: unknown, fallback: string): string {
+  const t = String(v ?? "").trim();
+  return HEX_RE.test(t) ? t.toLowerCase() : fallback;
+}
 
 export const MENU_PALETTE: Record<
   MenuThemeColor,
@@ -128,10 +141,57 @@ export const MENU_PALETTE: Record<
   },
 };
 
+export function sanitizeMenuCustom(raw: unknown): MenuCustom {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_MENU_CUSTOM };
+  const o = raw as Record<string, unknown>;
+  return {
+    enabled: o.enabled === true,
+    accent: sanitizeHex(o.accent, DEFAULT_MENU_CUSTOM.accent),
+    bg: sanitizeHex(o.bg, DEFAULT_MENU_CUSTOM.bg),
+    text: o.text === "light" ? "light" : "dark",
+  };
+}
+
 export function parseMenuTheme(raw: unknown): MenuTheme {
-  if (!raw || typeof raw !== "object") return { ...DEFAULT_MENU_THEME };
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_MENU_THEME, custom: { ...DEFAULT_MENU_CUSTOM } };
   const o = raw as Record<string, unknown>;
   const color = MENU_THEME_COLORS.includes(o.color as MenuThemeColor) ? (o.color as MenuThemeColor) : DEFAULT_MENU_THEME.color;
   const layout = MENU_LAYOUTS.includes(o.layout as MenuLayout) ? (o.layout as MenuLayout) : DEFAULT_MENU_THEME.layout;
-  return { color, layout };
+  return { color, layout, custom: sanitizeMenuCustom(o.custom) };
 }
+
+/**
+ * CSS-rule string for custom mode: the same token names as MENU_PALETTE,
+ * implemented as classes reading CSS variables injected on <main>.
+ * Color mixes keep hover/tints consistent for ANY picked color.
+ */
+export const CUSTOM_THEME_CSS = `
+.m-solid{background:var(--m-accent);color:#fff}
+.m-btnLg{background:var(--m-accent);color:#fff}
+.m-btnLg:hover{background:color-mix(in srgb,var(--m-accent) 85%,#000)}
+.m-accentText{color:var(--m-accent)}
+.m-softBg{background:color-mix(in srgb,var(--m-accent) 12%,#fff)}
+.m-softBorder{border-color:color-mix(in srgb,var(--m-accent) 16%,#fff)}
+.m-chipOn{background:var(--m-accent);color:#fff;box-shadow:0 1px 2px rgb(0 0 0/.15)}
+.m-chipOff{background:#fff;color:var(--m-accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--m-accent) 25%,#fff)}
+.m-ringSoft{--tw-ring-color:color-mix(in srgb,var(--m-accent) 25%,#fff)}
+.m-softHover:hover{background:color-mix(in srgb,var(--m-accent) 22%,#fff)}
+.m-tile{background:linear-gradient(135deg,var(--m-accent),color-mix(in srgb,var(--m-accent) 55%,#000))}
+.m-page{background:linear-gradient(180deg,var(--m-bg),color-mix(in srgb,var(--m-bg) 60%,#fff))}
+.m-heroText{color:var(--m-text)}
+`;
+
+/** Same shape as MENU_PALETTE entries, but class-only m-* utilities. */
+export const CUSTOM_PALETTE = {
+  solid: "m-solid",
+  btnLg: "m-btnLg",
+  accentText: "m-accentText",
+  softBg: "m-softBg",
+  softBorder: "m-softBorder",
+  ringSoft: "m-ringSoft",
+  softHover: "m-softHover",
+  chipOn: "m-chipOn",
+  chipOff: "m-chipOff",
+  tile: "m-tile",
+  pageBg: "m-page",
+} as const;

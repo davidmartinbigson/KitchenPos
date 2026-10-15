@@ -12,7 +12,7 @@ import type { Lang } from "@/lib/i18n";
 import { ADDON_KEYS, READY_ADDONS } from "@/lib/addons";
 import { BranchesSettings } from "@/components/branches/branches-settings";
 import { Check as CheckIcon, LayoutGrid, List, Palette } from "lucide-react";
-import { MENU_PALETTE, MENU_THEME_COLORS, type MenuLayout, type MenuThemeColor } from "@/lib/menu-theme";
+import { DEFAULT_MENU_CUSTOM, MENU_PALETTE, MENU_THEME_COLORS, type MenuCustom, type MenuLayout, type MenuThemeColor } from "@/lib/menu-theme";
 import { COUNTRIES, currencyForCountry } from "@/lib/countries";
 
 const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
@@ -39,7 +39,7 @@ export function SettingsForm({
     taxRate?: number;
     googleReviewUrl?: string;
     paymentMethods?: string[];
-    menuTheme?: { color: MenuThemeColor; layout: MenuLayout };
+    menuTheme?: { color: MenuThemeColor; layout: MenuLayout; custom?: MenuCustom };
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -64,6 +64,10 @@ export function SettingsForm({
   const [pmInput, setPmInput] = useState("");
   const [menuColor, setMenuColor] = useState<MenuThemeColor>(initial.menuTheme?.color ?? "orange");
   const [menuLayout, setMenuLayout] = useState<MenuLayout>(initial.menuTheme?.layout ?? "list");
+  const [customOn, setCustomOn] = useState(initial.menuTheme?.custom?.enabled === true);
+  const [customAccent, setCustomAccent] = useState(initial.menuTheme?.custom?.accent ?? DEFAULT_MENU_CUSTOM.accent);
+  const [customBg, setCustomBg] = useState(initial.menuTheme?.custom?.bg ?? DEFAULT_MENU_CUSTOM.bg);
+  const [customText, setCustomText] = useState<"dark" | "light">(initial.menuTheme?.custom?.text ?? "dark");
 
   function addPaymentMethod() {
     const name = pmInput.trim().slice(0, 24);
@@ -123,7 +127,11 @@ export function SettingsForm({
           ...(addons.payments === true ? { paymentMethods: pmList } : {}),
           ...(addons.tax === true ? { taxRate: Math.max(0, Math.min(30, Math.round(Number(taxRate) || 0))) } : {}),
           ...(addons.googleReview === true ? { googleReviewUrl } : {}),
-          menuTheme: { color: menuColor, layout: menuLayout },
+          menuTheme: {
+            color: menuColor,
+            layout: menuLayout,
+            custom: { enabled: customOn, accent: customAccent, bg: customBg, text: customText },
+          },
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -268,6 +276,83 @@ export function SettingsForm({
                   })}
                 </div>
               </Field>
+            </div>
+
+            {/* White-label custom colors */}
+            <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{t.settings.customLabel}</p>
+                  <p className="text-xs text-slate-500">{t.settings.customHint}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={customOn}
+                  onClick={() => setCustomOn((v) => !v)}
+                  className={cn(
+                    "relative h-8 w-14 shrink-0 rounded-full transition",
+                    customOn ? "bg-orange-500" : "bg-slate-300",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all",
+                      customOn ? "start-7" : "start-1",
+                    )}
+                  />
+                </button>
+              </div>
+              {customOn && (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field label={t.settings.accentLabel}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={customAccent}
+                        onChange={(e) => setCustomAccent(e.target.value)}
+                        className="h-11 w-16 cursor-pointer rounded-xl border border-slate-200 bg-white"
+                        aria-label={t.settings.accentLabel}
+                      />
+                      <span className="text-xs font-bold text-slate-600" dir="ltr">{customAccent}</span>
+                    </div>
+                  </Field>
+                  <Field label={t.settings.bgLabel}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={customBg}
+                        onChange={(e) => setCustomBg(e.target.value)}
+                        className="h-11 w-16 cursor-pointer rounded-xl border border-slate-200 bg-white"
+                        aria-label={t.settings.bgLabel}
+                      />
+                      <span className="text-xs font-bold text-slate-600" dir="ltr">{customBg}</span>
+                    </div>
+                  </Field>
+                  <Field label={t.settings.textToneLabel}>
+                    <div className="grid max-w-xs grid-cols-2 gap-2 rounded-2xl bg-white p-1.5 ring-1 ring-slate-200">
+                      {(
+                        [
+                          { key: "dark", label: t.settings.toneDark },
+                          { key: "light", label: t.settings.toneLight },
+                        ] as const
+                      ).map((o) => (
+                        <button
+                          type="button"
+                          key={o.key}
+                          onClick={() => setCustomText(o.key)}
+                          className={cn(
+                            "rounded-xl px-4 py-2 text-sm font-bold transition",
+                            customText === o.key ? "bg-slate-900 text-white shadow" : "text-slate-500 hover:text-slate-800",
+                          )}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                </div>
+              )}
             </div>
           </Card>
 
