@@ -2,6 +2,7 @@ import { requireOwnerPage } from "@/lib/page-guards";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { parseAddons } from "@/lib/addons";
 import { normalizePaymentMethods } from "@/lib/payment-methods";
+import { parseMenuTheme } from "@/lib/menu-theme";
 
 export const metadata = { title: "Settings" };
 
@@ -29,6 +30,7 @@ export default async function SettingsPage() {
         taxRate: (user as { taxRate?: number }).taxRate ?? 0,
         googleReviewUrl: (user as { googleReviewUrl?: string }).googleReviewUrl ?? "",
         paymentMethods: normalizePaymentMethods((user as { paymentMethods?: unknown }).paymentMethods),
+        menuTheme: parseMenuTheme((user as { menuTheme?: unknown }).menuTheme),
       }}
     />
   );

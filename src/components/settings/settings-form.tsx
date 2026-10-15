@@ -11,6 +11,8 @@ import { Button, Card, Field, Input, Select, cn, errorText } from "@/components/
 import type { Lang } from "@/lib/i18n";
 import { ADDON_KEYS, READY_ADDONS } from "@/lib/addons";
 import { BranchesSettings } from "@/components/branches/branches-settings";
+import { Check as CheckIcon, LayoutGrid, List, Palette } from "lucide-react";
+import { MENU_PALETTE, MENU_THEME_COLORS, type MenuLayout, type MenuThemeColor } from "@/lib/menu-theme";
 import { COUNTRIES, currencyForCountry } from "@/lib/countries";
 
 const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
@@ -37,6 +39,7 @@ export function SettingsForm({
     taxRate?: number;
     googleReviewUrl?: string;
     paymentMethods?: string[];
+    menuTheme?: { color: MenuThemeColor; layout: MenuLayout };
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -59,6 +62,8 @@ export function SettingsForm({
   const [googleReviewUrl, setGoogleReviewUrl] = useState(initial.googleReviewUrl ?? "");
   const [pmList, setPmList] = useState<string[]>(initial.paymentMethods ?? ["online-payment"]);
   const [pmInput, setPmInput] = useState("");
+  const [menuColor, setMenuColor] = useState<MenuThemeColor>(initial.menuTheme?.color ?? "orange");
+  const [menuLayout, setMenuLayout] = useState<MenuLayout>(initial.menuTheme?.layout ?? "list");
 
   function addPaymentMethod() {
     const name = pmInput.trim().slice(0, 24);
@@ -118,6 +123,7 @@ export function SettingsForm({
           ...(addons.payments === true ? { paymentMethods: pmList } : {}),
           ...(addons.tax === true ? { taxRate: Math.max(0, Math.min(30, Math.round(Number(taxRate) || 0))) } : {}),
           ...(addons.googleReview === true ? { googleReviewUrl } : {}),
+          menuTheme: { color: menuColor, layout: menuLayout },
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -207,6 +213,61 @@ export function SettingsForm({
                   {c}
                 </button>
               ))}
+            </div>
+          </Card>
+
+          {/* QR menu look: brand color + item layout */}
+          <Card className="p-6 sm:p-8">
+            <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Palette className="h-5 w-5 text-orange-500" /> {t.settings.menuThemeTitle}
+            </h2>
+            <p className="mb-5 text-sm text-slate-500">{t.settings.menuThemeDesc}</p>
+            <Field label={t.settings.themeColorLabel}>
+              <div className="flex flex-wrap gap-3">
+                {MENU_THEME_COLORS.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => setMenuColor(c)}
+                    title={MENU_PALETTE[c].label}
+                    className={cn(
+                      "relative grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br shadow-sm ring-offset-2 transition",
+                      MENU_PALETTE[c].tile,
+                      menuColor === c ? "ring-4 ring-slate-900 scale-105" : "ring-1 ring-slate-200 hover:scale-105",
+                    )}
+                  >
+                    {menuColor === c && <CheckIcon className="h-5 w-5 text-white drop-shadow" />}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs font-bold text-slate-600">{MENU_PALETTE[menuColor].label}</p>
+            </Field>
+            <div className="mt-5">
+              <Field label={t.settings.themeLayoutLabel}>
+                <div className="grid max-w-sm grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
+                  {(
+                    [
+                      { key: "list", label: t.settings.layoutList, icon: List },
+                      { key: "grid", label: t.settings.layoutGrid, icon: LayoutGrid },
+                    ] as const
+                  ).map((o) => {
+                    const Icon = o.icon;
+                    return (
+                      <button
+                        type="button"
+                        key={o.key}
+                        onClick={() => setMenuLayout(o.key)}
+                        className={cn(
+                          "flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition",
+                          menuLayout === o.key ? "bg-white text-slate-900 shadow" : "text-slate-500 hover:text-slate-800",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" /> {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
             </div>
           </Card>
 

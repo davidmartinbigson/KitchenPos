@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { compressImage } from "@/lib/format";
 import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
+import { cn } from "@/components/ui";
+import { DEFAULT_MENU_THEME, MENU_PALETTE, type MenuTheme } from "@/lib/menu-theme";
 
 /* Guest menu is standalone (no app i18n): static EN + AR strings, toggled in-page.
    Item names always stay as the restaurant typed them. */
@@ -103,6 +105,7 @@ export function QrMenuClient({
   paymentProof = false,
   taxRate = 0,
   demoMode = false,
+  menuTheme,
 }: {
   restaurantId: number;
   shopName: string;
@@ -117,7 +120,12 @@ export function QrMenuClient({
   taxRate?: number;
   /** Static on-device demo: orders are simulated locally, zero API traffic. */
   demoMode?: boolean;
+  /** Per-shop QR menu branding (color preset + item layout). */
+  menuTheme?: MenuTheme;
 }) {
+  const theme = menuTheme ?? DEFAULT_MENU_THEME;
+  const pal = MENU_PALETTE[theme.color];
+  const isGrid = theme.layout === "grid";
   const [cart, setCart] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [customerName, setCustomerName] = useState(tablePrefill);
@@ -239,8 +247,8 @@ export function QrMenuClient({
 
   if (!active) {
     return (
-      <main dir={isAr ? "rtl" : "ltr"} lang={lang} className="flex min-h-svh items-center justify-center bg-gradient-to-b from-amber-50 to-orange-50 px-4">
-        <div className="w-full max-w-sm rounded-3xl border border-orange-200 bg-white p-8 text-center shadow-lg">
+      <main dir={isAr ? "rtl" : "ltr"} lang={lang} className={cn("flex min-h-svh items-center justify-center bg-gradient-to-b px-4", pal.pageBg)}>
+        <div className={cn("w-full max-w-sm rounded-3xl border bg-white p-8 text-center shadow-lg", pal.softBorder)}>
           <div className="text-4xl">🍽️</div>
           <h1 className="mt-3 text-xl font-bold text-slate-900">{shopName}</h1>
           <p className="mt-2 text-sm text-slate-500">{t.unavailable}</p>
@@ -309,7 +317,7 @@ export function QrMenuClient({
           {guestTracking && (
             <a
               href={`/r/${restaurantId}/o/${done.orderNumber}`}
-              className="mt-6 block w-full rounded-xl bg-orange-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700"
+              className={cn("mt-6 block w-full rounded-xl py-3 text-sm font-semibold text-white shadow-sm transition", pal.btnLg)}
             >
               {t.trackLive}
             </a>
@@ -330,11 +338,11 @@ export function QrMenuClient({
   }
 
   return (
-    <main dir={isAr ? "rtl" : "ltr"} lang={lang} className="min-h-svh bg-gradient-to-b from-amber-50 to-orange-50 pb-28">
+    <main dir={isAr ? "rtl" : "ltr"} lang={lang} className={cn("min-h-svh bg-gradient-to-b pb-28", pal.pageBg)}>
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-orange-100 bg-white/90 backdrop-blur">
+      <header className={cn("sticky top-0 z-10 border-b bg-white/90 backdrop-blur", pal.softBorder)}>
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-xl shadow-sm">
+          <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-xl shadow-sm", pal.tile)}>
             🍽️
           </div>
           <div className="min-w-0 flex-1">
@@ -346,7 +354,7 @@ export function QrMenuClient({
           </div>
           <button
             onClick={() => switchLang(isAr ? "en" : "ar")}
-            className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-50"
+            className={cn("shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold ring-1 transition", pal.accentText, pal.ringSoft, pal.softHover)}
             aria-label="Switch language"
           >
             {isAr ? "EN" : "عربي"}
@@ -362,7 +370,7 @@ export function QrMenuClient({
             <button
               onClick={() => setCat("all")}
               className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                cat === "all" ? "bg-orange-600 text-white shadow-sm" : "bg-white text-slate-600 ring-1 ring-orange-200"
+                cat === "all" ? pal.chipOn : pal.chipOff
               }`}
             >
               {t.all}
@@ -372,7 +380,7 @@ export function QrMenuClient({
                 key={c}
                 onClick={() => setCat(c)}
                 className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                  cat === c ? "bg-orange-600 text-white shadow-sm" : "bg-white text-slate-600 ring-1 ring-orange-200"
+                  cat === c ? pal.chipOn : pal.chipOff
                 }`}
               >
                 {c}
@@ -387,17 +395,15 @@ export function QrMenuClient({
         {list.length === 0 ? (
           <p className="py-16 text-center text-sm text-slate-500">{t.noItems}</p>
         ) : (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <ul className={isGrid ? "grid grid-cols-2 gap-3 sm:grid-cols-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2"}>
             {list.map((item) => {
               const soldOut = item.stockQty != null && item.stockQty <= 0;
               const key = String(item.id);
               const qty = cart[key] ?? 0;
-              return (
-                <li
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
-                >
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-orange-100 text-3xl">
+              return isGrid ? (
+                /* Grid card: big art on top, price + add at the bottom */
+                <li key={item.id} className={cn("flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm", pal.softBorder)}>
+                  <div className={cn("relative flex h-24 items-center justify-center overflow-hidden text-5xl", pal.softBg)}>
                     {item.imageData ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.imageData} alt={item.name} className="h-full w-full object-cover" />
@@ -405,10 +411,39 @@ export function QrMenuClient({
                       <span>{item.emoji || "🍴"}</span>
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="flex flex-1 flex-col p-2.5">
                     <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
-                    <p className="text-xs text-slate-500">{item.category || "General"}</p>
-                    <p className="mt-0.5 text-sm font-bold text-orange-700">{money(item.price)}</p>
+                    <p className="truncate text-[10px] text-slate-500">{item.category || "General"}</p>
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+                      <p className={cn("truncate text-sm font-bold", pal.accentText)}>{money(item.price)}</p>
+                      {soldOut ? (
+                        <span className="shrink-0 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white">{t.soldOut}</span>
+                      ) : qty === 0 ? (
+                        <button
+                          onClick={() => bump(key, 1)}
+                          className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base font-bold text-white shadow-sm transition active:scale-95", pal.solid)}
+                          aria-label={`Add ${item.name}`}
+                        >
+                          +
+                        </button>
+                      ) : (
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            onClick={() => bump(key, -1)}
+                            className={cn("flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold transition active:scale-95", pal.softBg, pal.accentText)}
+                          >
+                            −
+                          </button>
+                          <span className="w-4 text-center text-sm font-bold text-slate-900">{qty}</span>
+                          <button
+                            onClick={() => bump(key, 1)}
+                            className={cn("flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white transition active:scale-95", pal.solid)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     {(item.extras?.length ?? 0) > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {(item.extras ?? []).map((ex, ei) => {
@@ -420,7 +455,47 @@ export function QrMenuClient({
                               key={ex.name}
                               disabled={soldOut}
                               onClick={() => bump(exKey, 1)}
-                              className="rounded-lg bg-orange-100 px-2 py-1 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-200 disabled:opacity-50"
+                              className={cn("rounded-lg px-1.5 py-0.5 text-[9px] font-bold ring-1 transition disabled:opacity-50", pal.softBg, pal.accentText, pal.ringSoft, pal.softHover)}
+                            >
+                              +{ex.name}
+                              {exQty > 0 ? ` (${exQty})` : ""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ) : (
+                /* List row (classic): art tile left, details mid, add right */
+                <li
+                  key={item.id}
+                  className={cn("flex items-center gap-3 rounded-2xl border bg-white p-3 shadow-sm", pal.softBorder)}
+                >
+                  <div className={cn("flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl text-3xl", pal.softBg)}>
+                    {item.imageData ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.imageData} alt={item.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{item.emoji || "🍴"}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
+                    <p className="text-xs text-slate-500">{item.category || "General"}</p>
+                    <p className={cn("mt-0.5 text-sm font-bold", pal.accentText)}>{money(item.price)}</p>
+                    {(item.extras?.length ?? 0) > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {(item.extras ?? []).map((ex, ei) => {
+                          const exKey = `${item.id}x${ei}`;
+                          const exQty = cart[exKey] ?? 0;
+                          return (
+                            <button
+                              type="button"
+                              key={ex.name}
+                              disabled={soldOut}
+                              onClick={() => bump(exKey, 1)}
+                              className={cn("rounded-lg px-2 py-1 text-[10px] font-bold ring-1 transition disabled:opacity-50", pal.softBg, pal.accentText, pal.ringSoft, pal.softHover)}
                             >
                               +{ex.name} {ex.price ? `+${money(ex.price)}` : ""}
                               {exQty > 0 ? ` (${exQty})` : ""}
@@ -437,7 +512,7 @@ export function QrMenuClient({
                   ) : qty === 0 ? (
                     <button
                       onClick={() => bump(key, 1)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-600 text-lg font-bold text-white shadow-sm transition active:scale-95"
+                      className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white shadow-sm transition active:scale-95", pal.solid)}
                       aria-label={`Add ${item.name}`}
                     >
                       +
@@ -446,14 +521,14 @@ export function QrMenuClient({
                     <div className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={() => bump(key, -1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-base font-bold text-orange-700 transition active:scale-95"
+                        className={cn("flex h-8 w-8 items-center justify-center rounded-full text-base font-bold transition active:scale-95", pal.softBg, pal.accentText)}
                       >
                         −
                       </button>
                       <span className="w-5 text-center text-sm font-bold text-slate-900">{qty}</span>
                       <button
                         onClick={() => bump(key, 1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-600 text-base font-bold text-white transition active:scale-95"
+                        className={cn("flex h-8 w-8 items-center justify-center rounded-full text-base font-bold text-white transition active:scale-95", pal.solid)}
                       >
                         +
                       </button>
@@ -508,14 +583,14 @@ export function QrMenuClient({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => bump(lineKey, -1)}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-bold text-orange-700 ring-1 ring-orange-200"
+                          className={cn("flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-bold ring-1", pal.accentText, pal.ringSoft)}
                         >
                           −
                         </button>
                         <span className="w-5 text-center text-sm font-bold">{l.qty}</span>
                         <button
                           onClick={() => bump(lineKey, 1)}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-sm font-bold text-white"
+                          className={cn("flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white", pal.solid)}
                         >
                           +
                         </button>
@@ -569,7 +644,7 @@ export function QrMenuClient({
             <button
               onClick={placeOrder}
               disabled={placing || count === 0}
-              className="mt-3 w-full rounded-xl bg-orange-600 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 disabled:opacity-50"
+              className={cn("mt-3 w-full rounded-xl py-3.5 text-sm font-bold text-white shadow-sm transition disabled:opacity-50", pal.btnLg)}
             >
               {placing ? t.placing : t.placeOrder}
             </button>

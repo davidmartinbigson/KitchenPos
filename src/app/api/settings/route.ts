@@ -6,6 +6,8 @@ import { jsonError, requireUser } from "@/lib/api";
 import { isLang } from "@/lib/i18n";
 import { currencyForCountry, isCountryCode } from "@/lib/countries";
 import { mergeAddons } from "@/lib/addons";
+import { parseMenuTheme } from "@/lib/menu-theme";
+import { ensureMenuThemeColumn } from "@/lib/menu-theme-ensure";
 import { normalizePaymentMethods } from "@/lib/payment-methods";
 
 export async function GET() {
@@ -26,6 +28,11 @@ export async function PATCH(request: Request) {
   }
 
   const updates: Partial<typeof users.$inferInsert> = {};
+
+  if (body.menuTheme !== undefined) {
+    await ensureMenuThemeColumn();
+    updates.menuTheme = parseMenuTheme(body.menuTheme);
+  }
 
   if (body.shopName !== undefined) {
     const shopName = String(body.shopName).trim();

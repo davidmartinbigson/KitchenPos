@@ -8,6 +8,7 @@ import { parseAddons } from "@/lib/addons";
 import { isValidSlugParam } from "@/lib/slug";
 import { QR_MENU_STRINGS } from "@/lib/qr-public";
 import { QrMenuClient } from "@/components/qr-menu/qr-menu-client";
+import { parseMenuTheme } from "@/lib/menu-theme";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function VanityMenuPage({ params, searchParams }: PageArgs)
 
   return (
     <QrMenuClient
+      menuTheme={parseMenuTheme((restaurant as { menuTheme?: unknown }).menuTheme)}
       restaurantId={userId}
       shopName={restaurant.shopName}
       currency={restaurant.currency}
