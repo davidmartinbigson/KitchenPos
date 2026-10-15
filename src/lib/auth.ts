@@ -103,6 +103,7 @@ const CURRENT_USER_COLS = {
       receiptSize: users.receiptSize,
       taxRate: users.taxRate,
       googleReviewUrl: users.googleReviewUrl,
+      menuTheme: users.menuTheme,
       lastSeenAt: users.lastSeenAt,
     };
 
