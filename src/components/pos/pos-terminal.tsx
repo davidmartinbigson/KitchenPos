@@ -119,6 +119,8 @@ export function PosTerminal({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [cartOpen, setCartOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
   const [customer, setCustomer] = useState("");
   const [received, setReceived] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -191,6 +193,17 @@ export function PosTerminal({
   }, []);
 
   // Track connectivity + auto-sync when the internet comes back.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => {
+      setIsMobileView(mq.matches);
+      if (!mq.matches) setCartOpen(false);
+    };
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- syncs browser connectivity state on mount */
     setOnline(navigator.onLine);
@@ -473,199 +486,8 @@ export function PosTerminal({
 
   const hasMenu = items.length > 0;
 
-  return (
-    <div className="space-y-6 overflow-x-clip">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black tracking-tight text-slate-950">{P.title}</h1>
-        <p className="text-slate-600">{P.subtitle}</p>
-      </header>
-
-      {/* Offline / pending-sync banner */}
-      <AnimatePresence>
-        {(!online || pending > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1",
-              !online
-                ? "bg-amber-50 text-amber-800 ring-amber-200"
-                : "bg-sky-50 text-sky-800 ring-sky-200",
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <span className={cn(
-                "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
-                !online ? "bg-amber-100 text-amber-600" : "bg-sky-100 text-sky-600",
-              )}>
-                {online ? <RefreshCw className={cn("h-5 w-5", syncing && "animate-spin")} /> : <CloudOff className="h-5 w-5" />}
-              </span>
-              <div>
-                <p className="text-sm font-black">
-                  {online ? (syncing ? P.syncing : P.youAreOnline) : P.offlineMode}
-                </p>
-                <p className="text-xs font-semibold opacity-80">
-                  {pending > 0 ? `${formatNumber(pending, lang)} ${P.pendingSync} · ` : ""}
-                  {!online && P.offlineHint}
-                </p>
-              </div>
-            </div>
-            {online && pending > 0 && (
-              <Button size="sm" variant="secondary" onClick={() => void syncQueue()} disabled={syncing}>
-                <Wifi className="h-4 w-4" /> {P.syncing}
-              </Button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {!hasMenu ? (
-        <EmptyState
-          icon={<UtensilsCrossed className="h-8 w-8" />}
-          title={P.noMenu}
-          description={readOnly ? undefined : P.addFirst}
-          action={
-            readOnly ? undefined : (
-              <Link href="/menu">
-                <Button>{t.menu.addItem}</Button>
-              </Link>
-            )
-          }
-        />
-      ) : (
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_380px]">
-          {/* Menu grid */}
-          <section className="min-w-0 space-y-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute start-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t.search}
-                  className="ps-12"
-                />
-              </div>
-            </div>
-
-            <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className={cn(
-                    "relative shrink-0 rounded-2xl px-4 py-2 text-sm font-semibold transition",
-                    category === cat
-                      ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20"
-                      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900",
-                  )}
-                >
-                  {cat === "all" ? t.menu.allCategories : cat}
-                </button>
-              ))}
-            </div>
-
-            {filtered.length === 0 ? (
-              <p className="py-16 text-center text-slate-500">{P.emptyFilter}</p>
-            ) : (
-              <motion.div layout className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] sm:gap-4">
-                <AnimatePresence mode="popLayout">
-                  {filtered.map((item, i) => {
-                    const qty = cart[item.id] ?? 0;
-                    const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
-                    return (
-                      <motion.button
-                        layout
-                        key={item.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ delay: Math.min(i * 0.02, 0.3), duration: 0.35 }}
-                        whileTap={item.available ? { scale: 0.95 } : undefined}
-                        onClick={() => item.available && !soldOut && addItem(String(item.id))}
-                        disabled={!item.available || soldOut}
-                        className={cn(
-                          "group relative flex flex-col overflow-hidden rounded-3xl bg-white text-start shadow-[0_8px_30px_-12px_rgba(15,23,42,0.25)] ring-1 transition-all duration-300",
-                          qty > 0 ? "ring-2 ring-orange-400" : "ring-slate-100",
-                          item.available
-                            ? "hover:-translate-y-1 hover:shadow-[0_18px_40px_-12px_rgba(249,115,22,0.35)]"
-                            : "opacity-50 grayscale",
-                        )}
-                      >
-                        <div className="relative h-24 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-32">
-                          {item.imageData ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={item.imageData}
-                              alt={item.name}
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
-                            />
-                          ) : (
-                            <span className="grid h-full w-full place-items-center text-5xl transition duration-500 group-hover:scale-110">
-                              {item.emoji}
-                            </span>
-                          )}
-                          {qty > 0 && (
-                            <motion.span
-                              key={qty}
-                              initial={{ scale: 0.4 }}
-                              animate={{ scale: 1 }}
-                              className="absolute end-2 top-2 grid h-8 min-w-8 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 px-2 text-sm font-black text-white shadow-lg"
-                            >
-                              {qty}
-                            </motion.span>
-                          )}
-                          {!item.available && (
-                            <span className="absolute start-2 top-2 rounded-full bg-slate-900/80 px-2 py-0.5 text-[11px] font-bold text-white">
-                              {t.menu.unavailable}
-                            </span>
-                          )}
-                          {soldOut && (
-                            <span className="absolute end-2 bottom-2 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white">
-                              {P.soldOut}
-                            </span>
-                          )}
-                          {addOn("stock") && item.stockQty != null && item.stockQty > 0 && item.stockQty <= 10 && (
-                            <span className="absolute end-2 bottom-2 rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
-                              {item.stockQty} {P.stockLeft}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col gap-1 p-3.5">
-                          <p className="line-clamp-1 font-bold text-slate-900">{item.name}</p>
-                          <p className="line-clamp-1 text-xs text-slate-500">{item.category}</p>
-                          <p className="mt-auto pt-1 text-base font-black text-orange-600">{money(item.price)}</p>
-                          {addOn("modifiers") && (item.extras?.length ?? 0) > 0 && (
-                            <div
-                              className="mt-1 flex flex-wrap gap-1"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {(item.extras ?? []).map((ex, ei) => (
-                                <button
-                                  type="button"
-                                  key={ex.name}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (item.available && !soldOut) addItem(`${item.id}x${ei}`);
-                                  }}
-                                  className="rounded-lg bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-200"
-                                >
-                                  +{ex.name} {ex.price ? `+${formatNumber(ex.price, lang)}` : ""}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </AnimatePresence>
-              </motion.div>
-            )}
-          </section>
-
-          {/* Order panel */}
+  // Shared by the desktop column and the mobile bottom sheet (single live panel).
+  const orderAside = (
           <aside
             id="order-panel"
             className="scroll-thin overscroll-contain lg:sticky lg:top-6 lg:max-h-[calc(100dvh-6.5rem)] lg:overflow-y-auto"
@@ -1005,8 +827,480 @@ export function PosTerminal({
               </div>
             </Card>
           </aside>
+  );
+
+  return (
+    <div className="space-y-6 overflow-x-clip">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-3xl font-black tracking-tight text-slate-950">{P.title}</h1>
+        <p className="text-slate-600">{P.subtitle}</p>
+      </header>
+
+      {/* Offline / pending-sync banner */}
+      <AnimatePresence>
+        {(!online || pending > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1",
+              !online
+                ? "bg-amber-50 text-amber-800 ring-amber-200"
+                : "bg-sky-50 text-sky-800 ring-sky-200",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <span className={cn(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                !online ? "bg-amber-100 text-amber-600" : "bg-sky-100 text-sky-600",
+              )}>
+                {online ? <RefreshCw className={cn("h-5 w-5", syncing && "animate-spin")} /> : <CloudOff className="h-5 w-5" />}
+              </span>
+              <div>
+                <p className="text-sm font-black">
+                  {online ? (syncing ? P.syncing : P.youAreOnline) : P.offlineMode}
+                </p>
+                <p className="text-xs font-semibold opacity-80">
+                  {pending > 0 ? `${formatNumber(pending, lang)} ${P.pendingSync} · ` : ""}
+                  {!online && P.offlineHint}
+                </p>
+              </div>
+            </div>
+            {online && pending > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => void syncQueue()} disabled={syncing}>
+                <Wifi className="h-4 w-4" /> {P.syncing}
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!hasMenu ? (
+        <EmptyState
+          icon={<UtensilsCrossed className="h-8 w-8" />}
+          title={P.noMenu}
+          description={readOnly ? undefined : P.addFirst}
+          action={
+            readOnly ? undefined : (
+              <Link href="/menu">
+                <Button>{t.menu.addItem}</Button>
+              </Link>
+            )
+          }
+        />
+      ) : (
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_380px]">
+          {/* Menu grid */}
+          <section className="min-w-0 space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute start-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t.search}
+                  className="ps-12"
+                />
+              </div>
+            </div>
+
+            <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={cn(
+                    "relative shrink-0 rounded-2xl px-4 py-2 text-sm font-semibold transition",
+                    category === cat
+                      ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20"
+                      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900",
+                  )}
+                >
+                  {cat === "all" ? t.menu.allCategories : cat}
+                </button>
+              ))}
+            </div>
+
+            {filtered.length === 0 ? (
+              <p className="py-16 text-center text-slate-500">{P.emptyFilter}</p>
+            ) : (
+              <motion.div layout className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] sm:gap-4">
+                <AnimatePresence mode="popLayout">
+                  {filtered.map((item, i) => {
+                    const qty = cart[item.id] ?? 0;
+                    const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
+                    return (
+                      <motion.button
+                        layout
+                        key={item.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ delay: Math.min(i * 0.02, 0.3), duration: 0.35 }}
+                        whileTap={item.available ? { scale: 0.95 } : undefined}
+                        onClick={() => item.available && !soldOut && addItem(String(item.id))}
+                        disabled={!item.available || soldOut}
+                        className={cn(
+                          "group relative flex flex-col overflow-hidden rounded-3xl bg-white text-start shadow-[0_8px_30px_-12px_rgba(15,23,42,0.25)] ring-1 transition-all duration-300",
+                          qty > 0 ? "ring-2 ring-orange-400" : "ring-slate-100",
+                          item.available
+                            ? "hover:-translate-y-1 hover:shadow-[0_18px_40px_-12px_rgba(249,115,22,0.35)]"
+                            : "opacity-50 grayscale",
+                        )}
+                      >
+                        <div className="relative h-24 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-32">
+                          {item.imageData ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageData}
+                              alt={item.name}
+                              className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                            />
+                          ) : (
+                            <span className="grid h-full w-full place-items-center text-5xl transition duration-500 group-hover:scale-110">
+                              {item.emoji}
+                            </span>
+                          )}
+                          {qty > 0 && (
+                            <motion.span
+                              key={qty}
+                              initial={{ scale: 0.4 }}
+                              animate={{ scale: 1 }}
+                              className="absolute end-2 top-2 grid h-8 min-w-8 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 px-2 text-sm font-black text-white shadow-lg"
+                            >
+                              {qty}
+                            </motion.span>
+                          )}
+                          {!item.available && (
+                            <span className="absolute start-2 top-2 rounded-full bg-slate-900/80 px-2 py-0.5 text-[11px] font-bold text-white">
+                              {t.menu.unavailable}
+                            </span>
+                          )}
+                          {soldOut && (
+                            <span className="absolute end-2 bottom-2 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                              {P.soldOut}
+                            </span>
+                          )}
+                          {addOn("stock") && item.stockQty != null && item.stockQty > 0 && item.stockQty <= 10 && (
+                            <span className="absolute end-2 bottom-2 rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                              {item.stockQty} {P.stockLeft}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-1 flex-col gap-1 p-3.5">
+                          <p className="line-clamp-1 font-bold text-slate-900">{item.name}</p>
+                          <p className="line-clamp-1 text-xs text-slate-500">{item.category}</p>
+                          <p className="mt-auto pt-1 text-base font-black text-orange-600">{money(item.price)}</p>
+                          {addOn("modifiers") && (item.extras?.length ?? 0) > 0 && (
+                            <div
+                              className="mt-1 flex flex-wrap gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {(item.extras ?? []).map((ex, ei) => (
+                                <button
+                                  type="button"
+                                  key={ex.name}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (item.available && !soldOut) addItem(`${item.id}x${ei}`);
+                                  }}
+                                  className="rounded-lg bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-200"
+                                >
+                                  +{ex.name} {ex.price ? `+${formatNumber(ex.price, lang)}` : ""}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </section>
+
+          {!isMobileView && orderAside}
         </div>
       )}
+
+      {/* Receipt */}
+      <Modal
+        open={Boolean(receipt)}
+        onClose={() => setReceipt(null)}
+        title={P.receiptTitle}
+        footer={
+          <div className="space-y-2">
+            <p className="text-center text-xs text-slate-500">{P.printHint}</p>
+            <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" /> {P.print}
+            </Button>
+            {receipt?.customerPhone && !demoMode && (
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() =>
+                  window.open(
+                    `https://wa.me/${waNumber(receipt.customerPhone ?? "", country)}?text=${encodeURIComponent(
+                      thankYouMessage({
+                        shop: receipt.shopName,
+                        orderNumber: receipt.orderNumber,
+                        total: money(receipt.total),
+                        menuLink: menuUrl ? `${window.location.origin}${menuUrl}` : "",
+                      }),
+                    )}`,
+                    "_blank",
+                  )
+                }
+              >
+                <MessageCircle className="h-4 w-4 text-emerald-600" /> {P.waCustomer}
+              </Button>
+            )}
+            <Button className="flex-1" onClick={() => setReceipt(null)}>
+              <ReceiptIcon className="h-4 w-4" /> {P.newOrder}
+            </Button>
+            </div>
+          </div>
+        }
+      >
+        {receipt && (
+          <motion.div
+            id="receipt-print"
+            initial={{ opacity: 0, y: 20, rotate: -1 }}
+            animate={{ opacity: 1, y: 0, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            className="mx-auto max-w-xs rounded-2xl bg-white p-5 font-mono text-[13px] text-slate-800 shadow-inner ring-1 ring-slate-200"
+          >
+            <div className="text-center">
+              {receipt.brandLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={receipt.brandLogo} alt="" className="mx-auto mb-2 h-14 w-14 rounded-xl object-contain" />
+              ) : null}
+              <p className="text-base font-black uppercase tracking-wide">{receipt.shopName}</p>
+              {receipt.brandHeader ? <p className="text-[11px] font-semibold text-slate-600">{receipt.brandHeader}</p> : null}
+              <p className="text-[11px] text-slate-500">
+                {formatDate(receipt.createdAt, lang)} · {formatTime(receipt.createdAt, lang)}
+              </p>
+              <p className="mt-1 text-xs font-bold">
+                {P.orderNo}
+                {receipt.orderNumber}
+              </p>
+              {receipt.pendingSync && (
+                <p className="mt-1 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700">
+                  {P.receiptPending}
+                </p>
+              )}
+              {receipt.customerName && <p className="text-xs">{receipt.customerName}</p>}
+              {receipt.orderType && (
+                <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-600">
+                  {receipt.orderType === "dine-in" ? P.dineIn : receipt.orderType === "takeaway" ? P.takeaway : P.delivery}
+                </p>
+              )}
+              {receipt.sellerName && (
+                <p className="text-xs text-slate-500">
+                  {P.by} {receipt.sellerName}
+                </p>
+              )}
+            </div>
+            <div className="my-3 border-t border-dashed border-slate-300" />
+            <div className="space-y-1.5">
+              {receipt.lines.map((line) => (
+                <div key={line.name}>
+                  <div className="flex justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate">
+                      {line.qty} × {line.name}
+                    </span>
+                    <span className="shrink-0">{formatNumber(line.lineTotal, lang)}</span>
+                  </div>
+                  {line.note ? <p className="ps-note italic">↳ {line.note}</p> : null}
+                </div>
+              ))}
+            </div>
+            <div className="my-3 border-t border-dashed border-slate-300" />
+            {(receipt.discount ?? 0) > 0 && (
+              <div className="flex justify-between text-xs font-semibold text-amber-700">
+                <span>{P.discount}</span>
+                <span>−{money(receipt.discount ?? 0)}</span>
+              </div>
+            )}
+            {(receipt.taxAmount ?? 0) > 0 && (
+              <div className="mt-0.5 flex justify-between text-xs font-semibold text-slate-600">
+                <span>
+                  {P.tax} ({receipt.taxRate ?? 0}%)
+                </span>
+                <span>+{money(receipt.taxAmount ?? 0)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm font-black">
+              <span>{P.totalLabel}</span>
+              <span>{money(receipt.total)}</span>
+            </div>
+            {receipt.paymentMethod && receipt.paymentMethod !== "cash" && (
+              <div className="mt-1 flex justify-between text-xs">
+                <span>{P.payMethod}</span>
+                <span className="font-bold uppercase">{receipt.paymentMethod}</span>
+              </div>
+            )}
+            <div className="mt-1 flex justify-between text-xs">
+              <span>{P.received}</span>
+              <span>{money(receipt.received)}</span>
+            </div>
+            <div className="mt-1 flex justify-between text-xs font-bold text-emerald-700">
+              <span>{P.changeLabel}</span>
+              <span>{money(receipt.change)}</span>
+            </div>
+            <div className="my-3 border-t border-dashed border-slate-300" />
+            {receipt.brandFooter ? (
+              <p className="mb-1 text-center text-[11px] font-semibold text-slate-600">{receipt.brandFooter}</p>
+            ) : null}
+            <p className="text-center text-[11px] text-slate-500">{P.thankYou}</p>
+          </motion.div>
+        )}
+      </Modal>
+
+      {/* Print sheet — one counter slip per category, then the full customer receipt */}
+      {receipt && (
+        <div id="print-sheet" aria-hidden="true">
+          {slipGroups(receipt).map((group, index, groups) => (
+            <div key={group.category} className="print-slip" style={receipt.brandSize === "58" ? { width: "58mm" } : undefined}>
+              <p className="ps-shop">{receipt.shopName}</p>
+              <p className="ps-label">{P.counterSlip}</p>
+              <p className="ps-category">{group.category}</p>
+              <p className="ps-meta">
+                {P.orderNo}
+                {receipt.orderNumber} · {formatDate(receipt.createdAt, lang)} ·{" "}
+                {formatTime(receipt.createdAt, lang)}
+              </p>
+              {receipt.customerName && <p className="ps-meta">{receipt.customerName}</p>}
+              <div className="ps-div" />
+              {group.lines.map((line) => (
+                <p key={`${group.category}-${line.name}`} className="ps-line">
+                  {formatNumber(line.qty, lang)} × {line.name}
+                  {line.note ? <span className="ps-note"> ↳ {line.note}</span> : null}
+                </p>
+              ))}
+              <div className="ps-div" />
+              <p className="ps-meta">
+                {P.qty}: {formatNumber(group.qty, lang)} · {formatNumber(index + 1, lang)}/
+                {formatNumber(groups.length + 1, lang)}
+              </p>
+            </div>
+          ))}
+          <div className="print-slip" style={receipt.brandSize === "58" ? { width: "58mm" } : undefined}>
+            {receipt.brandLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={receipt.brandLogo} alt="" className="ps-logo" />
+            ) : null}
+            <p className="ps-shop">{receipt.shopName}</p>
+            {receipt.brandHeader ? <p className="ps-meta">{receipt.brandHeader}</p> : null}
+            <p className="ps-label">{P.customerCopy}</p>
+            <p className="ps-meta">
+              {P.orderNo}
+              {receipt.orderNumber} · {formatDate(receipt.createdAt, lang)} ·{" "}
+              {formatTime(receipt.createdAt, lang)}
+            </p>
+            {receipt.customerName && <p className="ps-meta">{receipt.customerName}</p>}
+            {receipt.orderType && (
+              <p className="ps-meta ps-otype">
+                {receipt.orderType === "dine-in" ? P.dineIn : receipt.orderType === "takeaway" ? P.takeaway : P.delivery}
+              </p>
+            )}
+            {receipt.sellerName && (
+              <p className="ps-meta">
+                {P.by} {receipt.sellerName}
+              </p>
+            )}
+            <div className="ps-div" />
+            {receipt.lines.map((line) => (
+              <div key={`customer-${line.category}-${line.name}`} className="ps-line ps-split">
+                <span>
+                  {formatNumber(line.qty, lang)} × {line.name}
+                  {line.note ? <span className="ps-note"> ↳ {line.note}</span> : null}
+                </span>
+                <span>{formatNumber(line.lineTotal, lang)}</span>
+              </div>
+            ))}
+            {(receipt.taxAmount ?? 0) > 0 && (
+              <div className="ps-line ps-split">
+                <span>
+                  {P.tax} ({receipt.taxRate ?? 0}%)
+                </span>
+                <span>+{money(receipt.taxAmount ?? 0)}</span>
+              </div>
+            )}
+            <div className="ps-div" />
+            <div className="ps-line ps-split ps-total">
+              <span>{P.totalLabel}</span>
+              <span>{money(receipt.total)}</span>
+            </div>
+            <div className="ps-line ps-split">
+              <span>{P.received}</span>
+              <span>{money(receipt.received)}</span>
+            </div>
+            <div className="ps-line ps-split ps-change">
+              <span>{P.changeLabel}</span>
+              <span>{money(receipt.change)}</span>
+            </div>
+            <div className="ps-div" />
+            {receipt.brandFooter ? <p className="ps-meta">{receipt.brandFooter}</p> : null}
+            <p className="ps-meta">{P.thankYou}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Foodpanda-style sticky view-order bar (mobile) */}
+      {isMobileView && lines.length > 0 && <div className="h-16 lg:hidden" />}
+      {isMobileView && lines.length > 0 && !cartOpen && (
+        <motion.button
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          onClick={() => setCartOpen(true)}
+          className="fixed inset-x-3 bottom-24 z-40 flex items-center justify-between rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-orange-500 bg-[length:200%_auto] px-5 py-3.5 text-white shadow-xl shadow-orange-500/30 transition hover:shadow-2xl lg:hidden"
+        >
+          <span className="flex items-center gap-2 text-sm font-black">
+            <ShoppingBasket className="h-5 w-5" />
+            {P.viewOrder} · {formatNumber(itemCount, lang)}
+          </span>
+          <span className="text-base font-black">{money(total)}</span>
+        </motion.button>
+      )}
+
+      {/* Mobile cart bottom sheet */}
+      <AnimatePresence>
+        {isMobileView && cartOpen && (
+          <>
+            <motion.button
+              aria-label="Close"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCartOpen(false)}
+              className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="scroll-thin fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-3xl bg-white pb-24 shadow-2xl lg:hidden"
+            >
+              <div className="sticky top-0 z-10 flex items-center justify-between bg-white/90 px-5 pb-1 pt-3 backdrop-blur">
+                <span className="mx-auto h-1.5 w-12 rounded-full bg-slate-200" />
+                <button
+                  onClick={() => setCartOpen(false)}
+                  aria-label="Close cart"
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-4 pb-2">{orderAside}</div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Receipt */}
       <Modal
