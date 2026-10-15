@@ -4,6 +4,13 @@ import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { staff, users } from "@/db/schema";
+import { ensureMenuThemeColumn } from "@/lib/menu-theme-ensure";
+import { ensureDashThemeColumn } from "@/lib/dash-theme-ensure";
+
+/** Self-heals jsonb theme columns BEFORE any SELECT reads them (memoized, no-op after first call). */
+async function ensureThemeColumns() {
+  await Promise.all([ensureMenuThemeColumn(), ensureDashThemeColumn()]);
+}
 
 const scrypt = promisify(scryptCb) as (
   password: string,
@@ -110,6 +117,7 @@ const CURRENT_USER_COLS = {
 
 /** Fetches the full owner row - also used by the full-control cashier emulation. */
 export async function fetchUserById(uid: number) {
+  await ensureThemeColumns();
   const [user] = await db.select(CURRENT_USER_COLS).from(users).where(eq(users.id, uid)).limit(1);
   return user ?? null;
 }
@@ -197,6 +205,7 @@ export async function getSession(): Promise<AppSession | null> {
       .limit(1);
     if (!member || !member.active) return null;
 
+    await ensureThemeColumns();
     const [owner] = await db
       .select({
         shopName: users.shopName,
