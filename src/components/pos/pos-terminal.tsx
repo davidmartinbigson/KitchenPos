@@ -8,6 +8,8 @@ import {
   BadgeCheck,
   CheckCircle2,
   CloudOff,
+  LayoutGrid,
+  List,
   Minus,
   Plus,
   Printer,
@@ -238,6 +240,18 @@ export function PosTerminal({
     () => ["all", ...Array.from(new Set(items.map((i) => i.category))).sort()],
     [items],
   );
+
+  const [itemView, setItemView] = useState<"grid" | "list">("grid");
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem("kpos-pos-view");
+      if (v === "grid" || v === "list") setItemView(v);
+    } catch {}
+  }, []);
+  const pickView = (v: "grid" | "list") => {
+    setItemView(v);
+    try { window.localStorage.setItem("kpos-pos-view", v); } catch {}
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -903,6 +917,32 @@ export function PosTerminal({
                   className="ps-12"
                 />
               </div>
+              <div className="flex shrink-0 gap-1 self-end sm:self-auto rounded-2xl bg-white p-1 ring-1 ring-slate-200">
+                <button
+                  type="button"
+                  title={P.gridView}
+                  aria-label={P.gridView}
+                  onClick={() => pickView("grid")}
+                  className={cn(
+                    "grid h-9 w-9 place-items-center rounded-xl transition",
+                    itemView === "grid" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-slate-700",
+                  )}
+                >
+                  <LayoutGrid className="h-4.5 w-4.5" />
+                </button>
+                <button
+                  type="button"
+                  title={P.listView}
+                  aria-label={P.listView}
+                  onClick={() => pickView("list")}
+                  className={cn(
+                    "grid h-9 w-9 place-items-center rounded-xl transition",
+                    itemView === "list" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-slate-700",
+                  )}
+                >
+                  <List className="h-4.5 w-4.5" />
+                </button>
+              </div>
             </div>
 
             <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -924,7 +964,7 @@ export function PosTerminal({
 
             {filtered.length === 0 ? (
               <p className="py-16 text-center text-slate-500">{P.emptyFilter}</p>
-            ) : (
+            ) : itemView === "grid" ? (
               <motion.div layout className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] sm:gap-4">
                 <AnimatePresence mode="popLayout">
                   {filtered.map((item, i) => {
@@ -1018,6 +1058,73 @@ export function PosTerminal({
                   })}
                 </AnimatePresence>
               </motion.div>
+            ) : (
+              <div className="space-y-2">
+                <AnimatePresence mode="popLayout">
+                  {filtered.map((item, i) => {
+                    const qty = cart[item.id] ?? 0;
+                    const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
+                    return (
+                      <motion.button
+                        layout
+                        key={item.id}
+                        initial={{ opacity: 0, x: 12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 12 }}
+                        transition={{ delay: Math.min(i * 0.015, 0.25), duration: 0.25 }}
+                        whileTap={item.available ? { scale: 0.98 } : undefined}
+                        onClick={() => item.available && !soldOut && addItem(String(item.id))}
+                        disabled={!item.available || soldOut}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-2xl bg-white p-2.5 text-start shadow-[0_4px_20px_-10px_rgba(15,23,42,0.2)] ring-1 transition",
+                          qty > 0 ? "ring-2 ring-orange-400" : "ring-slate-100",
+                          item.available ? "hover:shadow-md hover:ring-orange-200" : "opacity-50 grayscale",
+                        )}
+                      >
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100">
+                          {item.imageData ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={item.imageData} alt={item.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="grid h-full w-full place-items-center text-2xl">{item.emoji}</span>
+                          )}
+                          {qty > 0 && (
+                            <motion.span
+                              key={qty}
+                              initial={{ scale: 0.4 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -bottom-1 -end-1 grid h-6 min-w-6 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 px-1.5 text-xs font-black text-white shadow"
+                            >
+                              {qty}
+                            </motion.span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-slate-900">{item.name}</p>
+                          <p className="truncate text-xs text-slate-500">{item.category}</p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-sm font-black text-orange-600">{money(item.price)}</span>
+                            {!item.available && (
+                              <span className="rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-bold text-white">{t.menu.unavailable}</span>
+                            )}
+                            {soldOut && (
+                              <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">{P.soldOut}</span>
+                            )}
+                            {addOn("stock") && item.stockQty != null && item.stockQty > 0 && item.stockQty <= 10 && (
+                              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                                {item.stockQty} {P.stockLeft}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 text-lg font-black text-white shadow-md">
+                          +
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
             )}
           </section>
 

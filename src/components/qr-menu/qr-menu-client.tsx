@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { compressImage } from "@/lib/format";
 import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
 import { cn } from "@/components/ui";
@@ -26,6 +26,8 @@ const STR = {
     all: "All",
     noItems: "No items available right now.",
     soldOut: "Sold out",
+    viewGrid: "Grid view",
+    viewList: "List view",
     items: "items",
     review: "Review order →",
     yourOrder: "Your order",
@@ -57,6 +59,8 @@ const STR = {
     trackLive: "🔥 تتبّع طلبك مباشرة",
     orderMore: "اطلب المزيد",
     tagline: "امسح • اطلب • استمتع",
+    viewGrid: "عرض شبكي",
+    viewList: "عرض قائمة",
     all: "الكل",
     noItems: "لا توجد أصناف متاحة حالياً.",
     soldOut: "نفد من المخزون",
@@ -126,7 +130,18 @@ export function QrMenuClient({
   const theme = menuTheme ?? DEFAULT_MENU_THEME;
   const customOn = theme.custom?.enabled === true;
   const pal = customOn ? CUSTOM_PALETTE : MENU_PALETTE[theme.color];
-  const isGrid = theme.layout === "grid";
+  const [viewOverride, setViewOverride] = useState<"grid" | "list" | null>(null);
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem("kpos-menu-view");
+      if (v === "grid" || v === "list") setViewOverride(v);
+    } catch {}
+  }, []);
+  const pickView = (v: "grid" | "list") => {
+    setViewOverride(v);
+    try { window.localStorage.setItem("kpos-menu-view", v); } catch {}
+  };
+  const isGrid = (viewOverride ?? theme.layout) === "grid";
   const customVars = customOn
     ? ({
         "--m-accent": theme.custom.accent,
@@ -402,6 +417,28 @@ export function QrMenuClient({
 
       {/* Items */}
       <div className="mx-auto max-w-2xl px-4 py-4">
+        {list.length > 0 && (
+          <div className="mb-3 flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              aria-label={t.viewGrid}
+              title={t.viewGrid}
+              onClick={() => pickView("grid")}
+              className={`grid h-8 w-8 place-items-center rounded-lg transition ${isGrid ? pal.chipOn : pal.chipOff}`}
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            </button>
+            <button
+              type="button"
+              aria-label={t.viewList}
+              title={t.viewList}
+              onClick={() => pickView("list")}
+              className={`grid h-8 w-8 place-items-center rounded-lg transition ${!isGrid ? pal.chipOn : pal.chipOff}`}
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="9" y1="5" x2="21" y2="5"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="19" x2="21" y2="19"/><circle cx="4.2" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.2" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.2" cy="19" r="1.4" fill="currentColor" stroke="none"/></svg>
+            </button>
+          </div>
+        )}
         {list.length === 0 ? (
           <p className="py-16 text-center text-sm text-slate-500">{t.noItems}</p>
         ) : (
