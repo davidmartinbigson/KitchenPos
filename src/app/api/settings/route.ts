@@ -8,6 +8,8 @@ import { currencyForCountry, isCountryCode } from "@/lib/countries";
 import { mergeAddons } from "@/lib/addons";
 import { parseMenuTheme } from "@/lib/menu-theme";
 import { ensureMenuThemeColumn } from "@/lib/menu-theme-ensure";
+import { parseDashTheme } from "@/lib/dash-theme";
+import { ensureDashThemeColumn } from "@/lib/dash-theme-ensure";
 import { normalizePaymentMethods } from "@/lib/payment-methods";
 
 export async function GET() {
@@ -32,6 +34,10 @@ export async function PATCH(request: Request) {
   if (body.menuTheme !== undefined) {
     await ensureMenuThemeColumn();
     updates.menuTheme = parseMenuTheme(body.menuTheme);
+  }
+  if (body.dashTheme !== undefined) {
+    await ensureDashThemeColumn();
+    updates.dashTheme = parseDashTheme(body.dashTheme);
   }
 
   if (body.shopName !== undefined) {

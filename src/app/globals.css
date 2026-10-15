@@ -456,3 +456,21 @@ input[type="number"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── White-label dashboard accent ────────────────────────────────
+   Renders inside [data-accent] scopes only. Recolours the Tailwind orange
+   scale so the whole workspace (nav, buttons, POS, dashboard) flips brand
+   color WITHOUT touching thousands of classes. Derived shades via color-mix. */
+[data-accent] {
+  --color-orange-50: color-mix(in srgb, var(--dash-accent) 6%, white);
+  --color-orange-100: color-mix(in srgb, var(--dash-accent) 12%, white);
+  --color-orange-200: color-mix(in srgb, var(--dash-accent) 22%, white);
+  --color-orange-300: color-mix(in srgb, var(--dash-accent) 35%, white);
+  --color-orange-400: color-mix(in srgb, var(--dash-accent) 58%, white);
+  --color-orange-500: var(--dash-accent);
+  --color-orange-600: color-mix(in srgb, var(--dash-accent) 88%, black);
+  --color-orange-700: color-mix(in srgb, var(--dash-accent) 75%, black);
+  --color-orange-800: color-mix(in srgb, var(--dash-accent) 62%, black);
+  --color-orange-900: color-mix(in srgb, var(--dash-accent) 48%, black);
+  --color-orange-950: color-mix(in srgb, var(--dash-accent) 36%, black);
+}

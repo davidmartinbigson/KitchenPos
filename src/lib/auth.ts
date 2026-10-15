@@ -104,6 +104,7 @@ const CURRENT_USER_COLS = {
       taxRate: users.taxRate,
       googleReviewUrl: users.googleReviewUrl,
       menuTheme: users.menuTheme,
+      dashTheme: users.dashTheme,
       lastSeenAt: users.lastSeenAt,
     };
 
@@ -204,6 +205,7 @@ export async function getSession(): Promise<AppSession | null> {
         suspended: users.suspended,
         accessExpiresAt: users.accessExpiresAt,
         role: users.role,
+        dashTheme: users.dashTheme,
       })
       .from(users)
       .where(eq(users.id, member.ownerId))

@@ -13,6 +13,8 @@ import { ADDON_KEYS, READY_ADDONS } from "@/lib/addons";
 import { BranchesSettings } from "@/components/branches/branches-settings";
 import { Check as CheckIcon, LayoutGrid, List, Palette } from "lucide-react";
 import { DEFAULT_MENU_CUSTOM, MENU_PALETTE, MENU_THEME_COLORS, type MenuCustom, type MenuLayout, type MenuThemeColor } from "@/lib/menu-theme";
+import { DASH_PRESETS, type DashTheme } from "@/lib/dash-theme";
+import { Paintbrush } from "lucide-react";
 import { COUNTRIES, currencyForCountry } from "@/lib/countries";
 
 const CURRENCY_PRESETS = ["Rs", "PKR", "$", "€", "£", "₹", "AED"];
@@ -40,6 +42,7 @@ export function SettingsForm({
     googleReviewUrl?: string;
     paymentMethods?: string[];
     menuTheme?: { color: MenuThemeColor; layout: MenuLayout; custom?: MenuCustom };
+    dashTheme?: DashTheme;
   };
 }) {
   const { t, lang, setLang } = useI18n();
@@ -68,6 +71,8 @@ export function SettingsForm({
   const [customAccent, setCustomAccent] = useState(initial.menuTheme?.custom?.accent ?? DEFAULT_MENU_CUSTOM.accent);
   const [customBg, setCustomBg] = useState(initial.menuTheme?.custom?.bg ?? DEFAULT_MENU_CUSTOM.bg);
   const [customText, setCustomText] = useState<"dark" | "light">(initial.menuTheme?.custom?.text ?? "dark");
+  const [dashOn, setDashOn] = useState(initial.dashTheme?.enabled === true);
+  const [dashAccent, setDashAccent] = useState(initial.dashTheme?.accent ?? "#ea580c");
 
   function addPaymentMethod() {
     const name = pmInput.trim().slice(0, 24);
@@ -132,6 +137,7 @@ export function SettingsForm({
             layout: menuLayout,
             custom: { enabled: customOn, accent: customAccent, bg: customBg, text: customText },
           },
+          dashTheme: { enabled: dashOn, accent: dashAccent },
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -353,6 +359,66 @@ export function SettingsForm({
                   </Field>
                 </div>
               )}
+            </div>
+          </Card>
+
+          {/* Dashboard theme (white-label workspace accent) */}
+          <Card className="p-6 sm:p-8">
+            <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Paintbrush className="h-5 w-5 text-orange-500" /> {t.settings.dashThemeTitle}
+            </h2>
+            <p className="mb-5 text-sm text-slate-500">{t.settings.dashThemeDesc}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2.5">
+                {DASH_PRESETS.map((p) => (
+                  <button
+                    type="button"
+                    key={p.hex}
+                    title={p.label}
+                    onClick={() => setDashAccent(p.hex)}
+                    className={cn(
+                      "h-9 w-9 rounded-xl shadow-sm ring-offset-2 transition hover:scale-110",
+                      dashAccent === p.hex ? "ring-4 ring-slate-900 scale-105" : "ring-1 ring-slate-200",
+                    )}
+                    style={{ backgroundColor: p.hex }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={dashAccent}
+                  onChange={(e) => setDashAccent(e.target.value)}
+                  className="h-9 w-14 cursor-pointer rounded-xl border border-slate-200 bg-white"
+                  title="#hex"
+                />
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={dashOn}
+                onClick={() => setDashOn((v) => !v)}
+                className={cn("relative h-8 w-14 shrink-0 rounded-full transition", dashOn ? "bg-orange-500" : "bg-slate-300")}
+              >
+                <span
+                  className={cn(
+                    "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all",
+                    dashOn ? "start-7" : "start-1",
+                  )}
+                />
+              </button>
+            </div>
+            {/* Live preview via the exact mechanism the app uses */}
+            <p className="mb-2 mt-5 text-xs font-black uppercase tracking-wider text-slate-400">{t.settings.dashPreview}</p>
+            <div
+              data-accent
+              style={{ "--dash-accent": dashAccent } as React.CSSProperties}
+              className="flex flex-wrap items-center gap-2.5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"
+            >
+              <span className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2 text-sm font-bold text-white shadow-sm">
+                {t.settings.dashPreview} ✨
+              </span>
+              <span className="rounded-lg bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-700 ring-1 ring-orange-200">Chip</span>
+              <span className="text-sm font-bold text-orange-600">Accent text</span>
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-500 text-white text-sm shadow">+</span>
             </div>
           </Card>
 

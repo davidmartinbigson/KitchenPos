@@ -3,6 +3,7 @@ import { SettingsForm } from "@/components/settings/settings-form";
 import { parseAddons } from "@/lib/addons";
 import { normalizePaymentMethods } from "@/lib/payment-methods";
 import { parseMenuTheme } from "@/lib/menu-theme";
+import { parseDashTheme } from "@/lib/dash-theme";
 
 export const metadata = { title: "Settings" };
 
@@ -31,6 +32,7 @@ export default async function SettingsPage() {
         googleReviewUrl: (user as { googleReviewUrl?: string }).googleReviewUrl ?? "",
         paymentMethods: normalizePaymentMethods((user as { paymentMethods?: unknown }).paymentMethods),
         menuTheme: parseMenuTheme((user as { menuTheme?: unknown }).menuTheme),
+        dashTheme: parseDashTheme((user as { dashTheme?: unknown }).dashTheme),
       }}
     />
   );
