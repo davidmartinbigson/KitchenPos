@@ -474,7 +474,7 @@ export function PosTerminal({
   const hasMenu = items.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-clip">
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl font-black tracking-tight text-slate-950">{P.title}</h1>
         <p className="text-slate-600">{P.subtitle}</p>
@@ -569,7 +569,7 @@ export function PosTerminal({
             {filtered.length === 0 ? (
               <p className="py-16 text-center text-slate-500">{P.emptyFilter}</p>
             ) : (
-              <motion.div layout className="grid grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-3 sm:gap-4">
+              <motion.div layout className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] sm:gap-4">
                 <AnimatePresence mode="popLayout">
                   {filtered.map((item, i) => {
                     const qty = cart[item.id] ?? 0;
@@ -593,7 +593,7 @@ export function PosTerminal({
                             : "opacity-50 grayscale",
                         )}
                       >
-                        <div className="relative h-28 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-32">
+                        <div className="relative h-24 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-32">
                           {item.imageData ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
