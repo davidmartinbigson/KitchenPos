@@ -417,6 +417,14 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
     }
   };
 
+  const deleteOrder = async (id: number) => {
+    if (!window.confirm(S.deleteOrderQ)) return;
+    const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setOrders((prev) => (prev ?? []).filter((o) => o.id !== id));
+    }
+  };
+
   const removeExpense = async (id: number) => {
     setExpenses((prev) => (prev ?? []).filter((e) => e.id !== id));
     await fetch(`/api/expenses/${id}`, { method: "DELETE" }).catch(() => {});
@@ -858,17 +866,29 @@ export function SalesView({ currency, addons = {} }: { currency: string; addons?
                               {S.change}: {money(order.changeDue)}
                             </p>
                           )}
-                          {addons.voids === true && !order.voidedAt && (
+                          <div className="mt-1 flex justify-end gap-1.5">
+                            {addons.voids === true && !order.voidedAt && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  voidOrder(order.id);
+                                }}
+                                className="rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-red-500 ring-1 ring-red-200 transition hover:bg-red-50"
+                              >
+                                {S.voidAction}
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                voidOrder(order.id);
+                                deleteOrder(order.id);
                               }}
-                              className="mt-1 rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-red-500 ring-1 ring-red-200 transition hover:bg-red-50"
+                              title={S.deleteOrderQ}
+                              className="rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-red-600 bg-red-600 transition hover:bg-red-700"
                             >
-                              {S.voidAction}
+                              🗑 {S.deleteOrder}
                             </button>
-                          )}
+                          </div>
                         </div>
                         <ChevronDown className={cn("h-5 w-5 shrink-0 text-slate-400 transition-transform", open && "rotate-180")} />
                       </button>
