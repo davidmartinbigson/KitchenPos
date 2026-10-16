@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isDeal } from "@/lib/deals";
 import { compressImage } from "@/lib/format";
 import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
 import { cn } from "@/components/ui";
@@ -91,6 +92,7 @@ type Item = {
   category: string;
   price: number;
   emoji: string;
+  description?: string | null;
   imageData: string | null;
   extras?: { name: string; price: number }[];
   stockQty?: number | null;
@@ -461,6 +463,11 @@ export function QrMenuClient({
                   <div className="flex flex-1 flex-col p-2.5">
                     <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
                     <p className="truncate text-[10px] text-slate-500">{item.category || "General"}</p>
+                    {isDeal(item.name) && (item.description ?? "").trim() !== "" && (
+                      <p className="mt-0.5 line-clamp-2 text-[10px] font-medium italic leading-snug text-slate-600">
+                        🎁 {item.description}
+                      </p>
+                    )}
                     <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
                       <p className={cn("truncate text-sm font-bold", pal.accentText)}>{money(item.price)}</p>
                       {soldOut ? (
@@ -530,6 +537,11 @@ export function QrMenuClient({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
                     <p className="text-xs text-slate-500">{item.category || "General"}</p>
+                    {isDeal(item.name) && (item.description ?? "").trim() !== "" && (
+                      <p className="mt-0.5 line-clamp-2 text-[11px] font-medium italic leading-snug text-slate-600">
+                        🎁 {item.description}
+                      </p>
+                    )}
                     <p className={cn("mt-0.5 text-sm font-bold", pal.accentText)}>{money(item.price)}</p>
                     {(item.extras?.length ?? 0) > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">

@@ -32,6 +32,7 @@ import { formatDate, formatMoney, formatNumber, formatTime } from "@/lib/format"
 import { enqueueOrder, loadQueue, removeFromQueue, saveQueue, type QueuedOrder } from "@/lib/offline-queue";
 import { nextDemoOrderNo, recordDemoOrder } from "@/lib/demo";
 import { thankYouMessage, waNumber } from "@/lib/whatsapp";
+import { isDeal, lineNote } from "@/lib/deals";
 import type { MenuItemDTO } from "@/lib/types";
 
 type ReceiptData = {
@@ -384,7 +385,7 @@ export function PosTerminal({
       shopName,
       sellerName: sellerName ?? "",
       currency,
-      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: notes[l.key]?.trim() || undefined })),
+      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: lineNote(l.item.name, l.item.description, notes[l.key]) || undefined })),
       total,
       received: receivedNum,
       change: Math.max(0, receivedNum - total),
@@ -417,7 +418,7 @@ export function PosTerminal({
       shopName,
       sellerName: sellerName ?? "",
       currency,
-      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: notes[l.key]?.trim() || undefined })),
+      lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: lineNote(l.item.name, l.item.description, notes[l.key]) || undefined })),
       total,
       received: receivedNum,
       change: Math.max(0, receivedNum - total),
@@ -490,7 +491,7 @@ export function PosTerminal({
         shopName,
         sellerName: sellerName ?? "",
         currency,
-        lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: notes[l.key]?.trim() || undefined })),
+        lines: lines.map((l) => ({ name: l.displayName, qty: l.qty, unitPrice: l.unitPrice, lineTotal: l.lineTotal, category: l.item.category || "General", note: lineNote(l.item.name, l.item.description, notes[l.key]) || undefined })),
         taxRate: (data.order as { taxRate?: number }).taxRate ?? taxRateClient,
         taxAmount: (data.order as { taxAmount?: number }).taxAmount ?? taxAmount,
         orderType: addOn("orderTypes") ? orderType : undefined,
@@ -612,6 +613,11 @@ export function PosTerminal({
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold text-slate-800">{line.item.name}</p>
                             <p className="text-xs text-slate-500">{money(line.item.price)}</p>
+                            {isDeal(line.item.name) && (line.item.description ?? "").trim() !== "" && (
+                              <p className="mt-0.5 line-clamp-2 text-[11px] font-semibold italic leading-tight text-amber-700">
+                                🎁 {line.item.description}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 rounded-xl bg-white p-1 shadow-sm">
                             <button
@@ -1055,6 +1061,11 @@ export function PosTerminal({
                         <div className="flex flex-1 flex-col gap-1 p-3.5">
                           <p className="line-clamp-1 font-bold text-slate-900">{item.name}</p>
                           <p className="line-clamp-1 text-xs text-slate-500">{item.category}</p>
+                          {isDeal(item.name) && (item.description ?? "").trim() !== "" && (
+                            <p className="line-clamp-2 text-[11px] font-semibold italic leading-tight text-amber-700">
+                              🎁 {item.description}
+                            </p>
+                          )}
                           <p className="mt-auto pt-1 text-base font-black text-orange-600">{money(item.price)}</p>
                           {addOn("modifiers") && (item.extras?.length ?? 0) > 0 && (
                             <div
@@ -1126,6 +1137,11 @@ export function PosTerminal({
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-slate-900">{item.name}</p>
                           <p className="truncate text-xs text-slate-500">{item.category}</p>
+                          {isDeal(item.name) && (item.description ?? "").trim() !== "" && (
+                            <p className="line-clamp-1 text-[11px] font-semibold italic text-amber-700">
+                              🎁 {item.description}
+                            </p>
+                          )}
                           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                             <span className="text-sm font-black text-orange-600">{money(item.price)}</span>
                             {!item.available && (

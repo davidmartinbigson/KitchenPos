@@ -3,6 +3,7 @@ import { and, count, eq, gte, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, orderItems, orders, users } from "@/db/schema";
 import { jsonError, parseId } from "@/lib/api";
+import { lineNote } from "@/lib/deals";
 import { accessState } from "@/lib/access";
 import { addonEnabled } from "@/lib/addons";
 
@@ -69,7 +70,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       costPrice: item.costPrice,
       quantity: l.quantity,
       lineTotal: unitPrice * l.quantity,
-      note: l.note,
+      note: lineNote(item.name, (item as { description?: unknown }).description as string | null, l.note),
     };
   });
 
