@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems } from "@/db/schema";
 import { requireApp } from "@/lib/api";
+import { ensureSortOrderColumn } from "@/lib/menu-sort-ensure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,12 +18,13 @@ function csvCell(value: unknown): string {
  */
 export async function GET() {
   const guard = await requireApp(["owner"]);
+  await ensureSortOrderColumn();
   if (!guard.ok) return guard.response;
   const ownerId = guard.ownerId;
 
   const rows = await db.query.menuItems.findMany({
     where: eq(menuItems.userId, ownerId),
-    orderBy: [asc(menuItems.category), asc(menuItems.name)],
+    orderBy: [asc(menuItems.sortOrder), asc(menuItems.id)],
     limit: 5000,
   });
 

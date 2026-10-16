@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems } from "@/db/schema";
 import { requireOwnerPage } from "@/lib/page-guards";
+import { ensureSortOrderColumn } from "@/lib/menu-sort-ensure";
 import type { MenuItemDTO } from "@/lib/types";
 import { MenuManager } from "@/components/menu/menu-manager";
 
@@ -10,6 +11,7 @@ export const metadata = { title: "Menu & Items" };
 export default async function MenuPage() {
   const user = await requireOwnerPage();
 
+  await ensureSortOrderColumn();
   const items: MenuItemDTO[] = await db
     .select({
       id: menuItems.id,
@@ -23,7 +25,7 @@ export default async function MenuPage() {
     })
     .from(menuItems)
     .where(eq(menuItems.userId, user.id))
-    .orderBy(asc(menuItems.category), asc(menuItems.name));
+    .orderBy(asc(menuItems.sortOrder), asc(menuItems.id));
 
   return <MenuManager initialItems={items} currency={user.currency} itemLimit={user.itemLimit} />;
 }

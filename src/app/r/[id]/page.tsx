@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { menuItems, users } from "@/db/schema";
 import { accessState } from "@/lib/access";
 import { parseId } from "@/lib/api";
+import { ensureSortOrderColumn } from "@/lib/menu-sort-ensure";
 import { parseAddons } from "@/lib/addons";
 import { QR_MENU_STRINGS } from "@/lib/qr-public";
 import { QrMenuClient } from "@/components/qr-menu/qr-menu-client";
@@ -36,10 +37,11 @@ export default async function QrMenuPage({ params, searchParams }: PageArgs) {
 
   const active = accessState(restaurant) === "active";
   const addons = parseAddons(restaurant.addons);
+  await ensureSortOrderColumn();
   const items = active
     ? await db.query.menuItems.findMany({
         where: and(eq(menuItems.userId, userId), eq(menuItems.available, true)),
-        orderBy: [asc(menuItems.category), asc(menuItems.name)],
+        orderBy: [asc(menuItems.sortOrder), asc(menuItems.id)],
       })
     : [];
 

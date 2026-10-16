@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   CheckSquare,
   Download,
+  GripVertical,
   FileSpreadsheet,
 } from "lucide-react";
 import { CsvImport } from "@/components/menu/csv-import";
@@ -118,6 +119,49 @@ export function MenuManager({
         (!q || i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q)),
     );
   }, [items, query, category]);
+
+  /* Sort view (local) + drag & drop reordering (persisted) */
+  type OrderMode = "custom" | "nameAsc" | "nameDesc" | "priceAsc" | "priceDesc";
+  const [orderMode, setOrderMode] = useState<OrderMode>("custom");
+  const displayItems = useMemo(() => {
+    if (orderMode === "custom") return filtered;
+    const arr = [...filtered];
+    if (orderMode === "nameAsc") arr.sort((a, b) => a.name.localeCompare(b.name));
+    if (orderMode === "nameDesc") arr.sort((a, b) => b.name.localeCompare(a.name));
+    if (orderMode === "priceAsc") arr.sort((a, b) => a.price - b.price);
+    if (orderMode === "priceDesc") arr.sort((a, b) => b.price - a.price);
+    return arr;
+  }, [filtered, orderMode]);
+
+  const dragId = useRef<number | null>(null);
+  const canDrag = orderMode === "custom" && !selectMode && query.trim() === "" && category === "all";
+  const dragProps = (id: number) =>
+    canDrag
+      ? {
+          draggable: true as const,
+          onDragStart: () => { dragId.current = id; },
+          onDragOver: (e: React.DragEvent) => e.preventDefault(),
+          onDrop: () => moveItem(dragId.current, id),
+        }
+      : {};
+
+  function moveItem(fromId: number | null, toId: number) {
+    if (!fromId || fromId === toId) return;
+    const arr = [...items];
+    const fi = arr.findIndex((i) => i.id === fromId);
+    const ti = arr.findIndex((i) => i.id === toId);
+    if (fi < 0 || ti < 0) return;
+    const [moved] = arr.splice(fi, 1);
+    arr.splice(ti, 0, moved);
+    setItems(arr);
+    void fetch("/api/menu/reorder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids: arr.map((i) => i.id) }),
+    })
+      .then((r) => { if (!r.ok) toast.show(t.error, "error"); })
+      .catch(() => toast.show(t.error, "error"));
+  }
 
   const money = (n: number) => formatMoney(n, currency);
 
@@ -384,6 +428,18 @@ export function MenuManager({
         >
           <CheckSquare className="h-4 w-4" /> {M.select}
         </button>
+        <select
+          value={orderMode}
+          onChange={(e) => setOrderMode(e.target.value as typeof orderMode)}
+          title={M.dragHint}
+          className="h-10 shrink-0 cursor-pointer rounded-2xl bg-white px-3 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition hover:text-slate-900"
+        >
+          <option value="custom">{M.sortCustom}</option>
+          <option value="nameAsc">{M.sortNameAsc}</option>
+          <option value="nameDesc">{M.sortNameDesc}</option>
+          <option value="priceAsc">{M.sortPriceAsc}</option>
+          <option value="priceDesc">{M.sortPriceDesc}</option>
+        </select>
       </div>
       {categories.length > 0 && (
         <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -448,7 +504,7 @@ export function MenuManager({
       ) : itemView === "grid" ? (
         <motion.div layout className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           <AnimatePresence mode="popLayout">
-            {filtered.map((item, i) => (
+            {displayItems.map((item, i) => (
               <motion.div
                 layout
                 key={item.id}
@@ -458,6 +514,7 @@ export function MenuManager({
                 transition={{ delay: Math.min(i * 0.04, 0.3), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 onClick={selectMode ? () => toggleSelect(item.id) : undefined}
                 className={selectMode ? "cursor-pointer" : undefined}
+                {...dragProps(item.id)}
               >
                 <Card hover className={cn(
                   "group flex h-full flex-col overflow-hidden p-0",
@@ -488,6 +545,11 @@ export function MenuManager({
                         )}
                       >
                         <Check className="h-4 w-4" />
+                      </span>
+                    )}
+                    {canDrag && (
+                      <span className="absolute end-2 bottom-2 grid h-7 w-7 cursor-grab place-items-center rounded-full bg-white/90 text-slate-500 shadow ring-1 ring-slate-200">
+                        <GripVertical className="h-4 w-4" />
                       </span>
                     )}
                   </div>
@@ -551,7 +613,7 @@ export function MenuManager({
       ) : (
         <div className={cn("grid gap-2 sm:gap-2.5", filtered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
           <AnimatePresence mode="popLayout">
-            {filtered.map((item, i) => (
+            {displayItems.map((item, i) => (
               <motion.div
                 layout
                 key={item.id}
@@ -560,6 +622,7 @@ export function MenuManager({
                 exit={{ opacity: 0, x: 14 }}
                 transition={{ delay: Math.min(i * 0.02, 0.25), duration: 0.3 }}
                 onClick={selectMode ? () => toggleSelect(item.id) : undefined}
+                {...dragProps(item.id)}
                 className={cn(
                   "flex items-center gap-2 rounded-3xl bg-white p-2 shadow-[0_6px_24px_-12px_rgba(15,23,42,0.2)] ring-1 ring-slate-100 transition hover:shadow-md hover:ring-orange-200 sm:gap-3 sm:p-3",
                   selectMode && "cursor-pointer",
@@ -576,6 +639,11 @@ export function MenuManager({
                     )}
                   >
                     <Check className="h-3.5 w-3.5" />
+                  </span>
+                )}
+                {canDrag && (
+                  <span className="grid h-8 w-5 shrink-0 cursor-grab place-items-center text-slate-300">
+                    <GripVertical className="h-4 w-4" />
                   </span>
                 )}
                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-16 sm:w-16">

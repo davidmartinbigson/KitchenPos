@@ -3,6 +3,7 @@ import { asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, users } from "@/db/schema";
 import { jsonError, requireApp } from "@/lib/api";
+import { ensureSortOrderColumn } from "@/lib/menu-sort-ensure";
 
 const MAX_IMAGE_LENGTH = 690_000; // data-URL chars for a ~500KB image (500*1024*4/3 + header)
 
@@ -11,12 +12,13 @@ export async function GET() {
   const guard = await requireApp(["owner", "cashier"]);
   if (!guard.ok) return guard.response;
   const ownerId = guard.ownerId;
+  await ensureSortOrderColumn();
 
   const items = await db
     .select()
     .from(menuItems)
     .where(eq(menuItems.userId, ownerId))
-    .orderBy(asc(menuItems.category), asc(menuItems.name));
+    .orderBy(asc(menuItems.sortOrder), asc(menuItems.id));
 
   return NextResponse.json({ items });
 }
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
     .insert(menuItems)
     .values({
       userId: ownerId,
+      sortOrder: total, // appended at the end of the owner order
       name: name.slice(0, 120),
       category: String(body.category ?? "").trim().slice(0, 60) || "General",
       description: String(body.description ?? "").trim().slice(0, 400),

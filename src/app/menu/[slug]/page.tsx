@@ -6,6 +6,7 @@ import { menuItems, users } from "@/db/schema";
 import { accessState } from "@/lib/access";
 import { parseAddons } from "@/lib/addons";
 import { isValidSlugParam } from "@/lib/slug";
+import { ensureSortOrderColumn } from "@/lib/menu-sort-ensure";
 import { QR_MENU_STRINGS } from "@/lib/qr-public";
 import { QrMenuClient } from "@/components/qr-menu/qr-menu-client";
 import { parseMenuTheme } from "@/lib/menu-theme";
@@ -43,10 +44,11 @@ export default async function VanityMenuPage({ params, searchParams }: PageArgs)
   const tableLabel = tableRaw && Number.isInteger(tableN) && tableN >= 1 && tableN <= 200 ? tableN : null;
 
   const active = accessState(restaurant) === "active";
+  await ensureSortOrderColumn();
   const items = active
     ? await db.query.menuItems.findMany({
         where: and(eq(menuItems.userId, userId), eq(menuItems.available, true)),
-        orderBy: [asc(menuItems.category), asc(menuItems.name)],
+        orderBy: [asc(menuItems.sortOrder), asc(menuItems.id)],
       })
     : [];
 

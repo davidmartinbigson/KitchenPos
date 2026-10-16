@@ -266,6 +266,19 @@ export function PosTerminal({
     });
   }, [items, query, category]);
 
+  /* Local sort view */
+  type OrderMode = "custom" | "nameAsc" | "nameDesc" | "priceAsc" | "priceDesc";
+  const [orderMode, setOrderMode] = useState<OrderMode>("custom");
+  const displayItems = useMemo(() => {
+    if (orderMode === "custom") return filtered;
+    const arr = [...filtered];
+    if (orderMode === "nameAsc") arr.sort((a, b) => a.name.localeCompare(b.name));
+    if (orderMode === "nameDesc") arr.sort((a, b) => b.name.localeCompare(a.name));
+    if (orderMode === "priceAsc") arr.sort((a, b) => a.price - b.price);
+    if (orderMode === "priceDesc") arr.sort((a, b) => b.price - a.price);
+    return arr;
+  }, [filtered, orderMode]);
+
   const lines = useMemo(
     () =>
       Object.entries(cart)
@@ -943,6 +956,17 @@ export function PosTerminal({
                   <List className="h-4.5 w-4.5" />
                 </button>
               </div>
+              <select
+                value={orderMode}
+                onChange={(e) => setOrderMode(e.target.value as typeof orderMode)}
+                className="h-11 w-full cursor-pointer rounded-2xl bg-white px-3 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition hover:text-slate-900 sm:w-auto"
+              >
+                <option value="custom">{P.sortCustom}</option>
+                <option value="nameAsc">{P.sortNameAsc}</option>
+                <option value="nameDesc">{P.sortNameDesc}</option>
+                <option value="priceAsc">{P.sortPriceAsc}</option>
+                <option value="priceDesc">{P.sortPriceDesc}</option>
+              </select>
             </div>
 
             <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -967,7 +991,7 @@ export function PosTerminal({
             ) : itemView === "grid" ? (
               <motion.div layout className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] sm:gap-4">
                 <AnimatePresence mode="popLayout">
-                  {filtered.map((item, i) => {
+                  {displayItems.map((item, i) => {
                     const qty = cart[item.id] ?? 0;
                     const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
                     return (
@@ -1061,7 +1085,7 @@ export function PosTerminal({
             ) : (
               <div className={cn("grid gap-2 sm:gap-2.5", filtered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                 <AnimatePresence mode="popLayout">
-                  {filtered.map((item, i) => {
+                  {displayItems.map((item, i) => {
                     const qty = cart[item.id] ?? 0;
                     const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
                     return (

@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { menuItems, users } from "@/db/schema";
 import { requirePosScope } from "@/lib/page-guards";
+import { ensureSortOrderColumn } from "@/lib/menu-sort-ensure";
 import type { MenuItemDTO } from "@/lib/types";
 import { parseAddons } from "@/lib/addons";
 import { normalizePaymentMethods } from "@/lib/payment-methods";
@@ -27,6 +28,7 @@ export default async function PosPage() {
     .from(users)
     .where(eq(users.id, scope.ownerId));
 
+  await ensureSortOrderColumn();
   const rows = await db
     .select({
       id: menuItems.id,
@@ -41,7 +43,7 @@ export default async function PosPage() {
     })
     .from(menuItems)
     .where(eq(menuItems.userId, scope.ownerId))
-    .orderBy(asc(menuItems.category), asc(menuItems.name));
+    .orderBy(asc(menuItems.sortOrder), asc(menuItems.id));
 
   const items: MenuItemDTO[] = rows;
 

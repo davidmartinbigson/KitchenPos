@@ -161,6 +161,8 @@ export const menuItems = pgTable(
     imageData: text("image_data"),
     emoji: text("emoji").notNull().default("🍽️"),
     available: boolean("available").notNull().default(true),
+  /** Owner-arranged display order (drag & drop on the manager page). */
+  sortOrder: integer("sort_order").notNull().default(0),
   /** Remaining pieces for the optional stock add-on; null = unlimited. */
   stockQty: integer("stock_qty"),
   /** Optional extras/add-ons for this item: [{ name, price }] (modifiers add-on). */
