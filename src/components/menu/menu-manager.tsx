@@ -16,7 +16,9 @@ import {
   List,
   Layers,
   CircleDollarSign,
+  Check,
   CheckCircle2,
+  CheckSquare,
   Download,
   FileSpreadsheet,
 } from "lucide-react";
@@ -83,6 +85,15 @@ export function MenuManager({
     setItemView(v);
     try { window.localStorage.setItem("kpos-menumgr-view", v); } catch {}
   };
+
+  /* Bulk select / delete */
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id: number) =>
+    setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const exitSelect = () => { setSelectMode(false); setSelected([]); };
   const [editing, setEditing] = useState<MenuItemDTO | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -240,6 +251,31 @@ export function MenuManager({
     setDeleteTarget(null);
   }
 
+  async function confirmBulkDelete() {
+    if (selected.length === 0) return;
+    setBulkDeleting(true);
+    const results = await Promise.all(
+      selected.map(async (id) => {
+        try {
+          const res = await fetch(`/api/menu/${id}`, { method: "DELETE" });
+          return { id, ok: res.ok };
+        } catch {
+          return { id, ok: false };
+        }
+      }),
+    );
+    setBulkDeleting(false);
+    const gone = new Set(results.filter((r) => r.ok).map((r) => r.id));
+    const failed = results.length - gone.size;
+    if (gone.size > 0) {
+      setItems((prev) => prev.filter((i) => !gone.has(i.id)));
+      toast.show(M.bulkDeleted, "success");
+    }
+    if (failed > 0) toast.show(`${failed} ✕ — ${t.error}`, "error");
+    setBulkDeleteOpen(false);
+    exitSelect();
+  }
+
   const availableCount = items.filter((i) => i.available).length;
 
   const stats = [
@@ -336,6 +372,18 @@ export function MenuManager({
             <List className="h-4.5 w-4.5" />
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+          className={cn(
+            "flex shrink-0 items-center gap-2 self-end rounded-2xl px-4 py-2 text-sm font-bold ring-1 transition md:self-auto",
+            selectMode
+              ? "bg-orange-500 text-white ring-orange-500 shadow"
+              : "bg-white text-slate-600 ring-slate-200 hover:text-slate-900",
+          )}
+        >
+          <CheckSquare className="h-4 w-4" /> {M.select}
+        </button>
       </div>
       {categories.length > 0 && (
         <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -353,6 +401,32 @@ export function MenuManager({
               {cat === "all" ? M.allCategories : cat}
             </button>
           ))}
+        </div>
+      )}
+
+      {selectMode && items.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-orange-200">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-orange-500"
+              checked={filtered.length > 0 && filtered.every((i) => selected.includes(i.id))}
+              onChange={(e) => setSelected(e.target.checked ? filtered.map((i) => i.id) : [])}
+            />
+            {M.selectAll}
+          </label>
+          <span className="text-sm font-black text-orange-600">{selected.length} ✓</span>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={exitSelect}>{t.cancel}</Button>
+            <Button
+              variant="danger"
+              className="!bg-red-600 !text-white hover:!bg-red-700"
+              disabled={selected.length === 0}
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" /> {M.bulkDelete} ({selected.length})
+            </Button>
+          </div>
         </div>
       )}
 
@@ -382,8 +456,13 @@ export function MenuManager({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: Math.min(i * 0.04, 0.3), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                onClick={selectMode ? () => toggleSelect(item.id) : undefined}
+                className={selectMode ? "cursor-pointer" : undefined}
               >
-                <Card hover className="group flex h-full flex-col overflow-hidden p-0">
+                <Card hover className={cn(
+                  "group flex h-full flex-col overflow-hidden p-0",
+                  selectMode && selected.includes(item.id) && "ring-2 ring-orange-500",
+                )}>
                   <div className="relative h-44 overflow-hidden bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100">
                     {item.imageData ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -399,6 +478,18 @@ export function MenuManager({
                     <span className="absolute end-3 top-3 rounded-2xl bg-slate-950/85 px-3 py-1.5 text-sm font-black text-white shadow-lg">
                       {money(item.price)}
                     </span>
+                    {selectMode && (
+                      <span
+                        className={cn(
+                          "absolute start-2 bottom-2 grid h-7 w-7 place-items-center rounded-full shadow ring-2 transition",
+                          selected.includes(item.id)
+                            ? "bg-orange-500 text-white ring-orange-500"
+                            : "bg-white/90 text-slate-400 ring-white",
+                        )}
+                      >
+                        <Check className="h-4 w-4" />
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-1 flex-col p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -407,6 +498,7 @@ export function MenuManager({
                     <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-sm text-slate-500">
                       {item.description || "—"}
                     </p>
+                    {!selectMode && (
                     <div className="mt-auto flex items-center justify-between gap-3 pt-5">
                       <button
                         onClick={() => toggleAvailable(item)}
@@ -449,6 +541,7 @@ export function MenuManager({
                         </button>
                       </div>
                     </div>
+                    )}
                   </div>
                 </Card>
               </motion.div>
@@ -466,8 +559,25 @@ export function MenuManager({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 14 }}
                 transition={{ delay: Math.min(i * 0.02, 0.25), duration: 0.3 }}
-                className="flex items-center gap-2 rounded-3xl bg-white p-2 shadow-[0_6px_24px_-12px_rgba(15,23,42,0.2)] ring-1 ring-slate-100 transition hover:shadow-md hover:ring-orange-200 sm:gap-3 sm:p-3"
+                onClick={selectMode ? () => toggleSelect(item.id) : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-3xl bg-white p-2 shadow-[0_6px_24px_-12px_rgba(15,23,42,0.2)] ring-1 ring-slate-100 transition hover:shadow-md hover:ring-orange-200 sm:gap-3 sm:p-3",
+                  selectMode && "cursor-pointer",
+                  selectMode && selected.includes(item.id) && "ring-2 ring-orange-500",
+                )}
               >
+                {selectMode && (
+                  <span
+                    className={cn(
+                      "grid h-6 w-6 shrink-0 place-items-center rounded-full ring-2 transition",
+                      selected.includes(item.id)
+                        ? "bg-orange-500 text-white ring-orange-500"
+                        : "bg-white text-slate-400 ring-slate-300",
+                    )}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                )}
                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 sm:h-16 sm:w-16">
                   {item.imageData ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -488,6 +598,7 @@ export function MenuManager({
                 <span className="shrink-0 rounded-2xl bg-slate-950/85 px-2 py-1 text-xs font-black text-white shadow sm:px-3 sm:py-1.5 sm:text-sm">
                   {money(item.price)}
                 </span>
+                {!selectMode && (<>
                 <button
                   onClick={() => toggleAvailable(item)}
                   title={item.available ? M.available : M.unavailable}
@@ -526,6 +637,7 @@ export function MenuManager({
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
+                </>)}
               </motion.div>
             ))}
           </AnimatePresence>
@@ -752,6 +864,33 @@ export function MenuManager({
         <p className="text-slate-600">
           {M.deleteConfirm}
           {deleteTarget && <span className="mt-2 block font-bold text-slate-900">{deleteTarget.name}</span>}
+        </p>
+      </Modal>
+
+      {/* Bulk delete confirm */}
+      <Modal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title={M.bulkDelete}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setBulkDeleteOpen(false)}>
+              {t.cancel}
+            </Button>
+            <Button
+              variant="danger"
+              className="!bg-red-600 !text-white hover:!bg-red-700"
+              loading={bulkDeleting}
+              onClick={confirmBulkDelete}
+            >
+              <Trash2 className="h-4 w-4" /> {M.bulkDelete} ({selected.length})
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-slate-600">
+          {M.bulkDeleteQ}
+          <span className="mt-2 block font-black text-red-600">{selected.length} items ✕</span>
         </p>
       </Modal>
     </div>
