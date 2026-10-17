@@ -10,6 +10,7 @@ import {
   CloudOff,
   LayoutGrid,
   List,
+  Type,
   Minus,
   Plus,
   Printer,
@@ -242,14 +243,14 @@ export function PosTerminal({
     [items],
   );
 
-  const [itemView, setItemView] = useState<"grid" | "list">("grid");
+  const [itemView, setItemView] = useState<"grid" | "list" | "compact">("grid");
   useEffect(() => {
     try {
       const v = window.localStorage.getItem("kpos-pos-view");
-      if (v === "grid" || v === "list") setItemView(v);
+      if (v === "grid" || v === "list" || v === "compact") setItemView(v);
     } catch {}
   }, []);
-  const pickView = (v: "grid" | "list") => {
+  const pickView = (v: "grid" | "list" | "compact") => {
     setItemView(v);
     try { window.localStorage.setItem("kpos-pos-view", v); } catch {}
   };
@@ -961,6 +962,18 @@ export function PosTerminal({
                 >
                   <List className="h-4.5 w-4.5" />
                 </button>
+                <button
+                  type="button"
+                  title={P.textView}
+                  aria-label={P.textView}
+                  onClick={() => pickView("compact")}
+                  className={cn(
+                    "grid h-9 w-9 place-items-center rounded-xl transition",
+                    itemView === "compact" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-slate-700",
+                  )}
+                >
+                  <Type className="h-4.5 w-4.5" />
+                </button>
               </div>
               <select
                 value={orderMode}
@@ -1093,7 +1106,7 @@ export function PosTerminal({
                   })}
                 </AnimatePresence>
               </motion.div>
-            ) : (
+            ) : itemView === "list" ? (
               <div className={cn("grid gap-2 sm:gap-2.5", filtered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                 <AnimatePresence mode="popLayout">
                   {displayItems.map((item, i) => {
@@ -1165,6 +1178,44 @@ export function PosTerminal({
                   })}
                 </AnimatePresence>
               </div>
+            ) : (
+              <motion.div layout className="grid grid-cols-3 gap-1.5 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-2">
+                <AnimatePresence mode="popLayout">
+                  {displayItems.map((item, i) => {
+                    const qty = cart[item.id] ?? 0;
+                    const soldOut = addOn("stock") && item.stockQty != null && item.stockQty <= 0;
+                    return (
+                      <motion.button
+                        layout
+                        key={item.id}
+                        initial={{ opacity: 0, scale: 0.94 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.94 }}
+                        transition={{ delay: Math.min(i * 0.01, 0.2), duration: 0.2 }}
+                        whileTap={item.available ? { scale: 0.95 } : undefined}
+                        onClick={() => item.available && !soldOut && addItem(String(item.id))}
+                        disabled={!item.available || soldOut}
+                        className={cn(
+                          "relative flex h-16 flex-col justify-between overflow-hidden rounded-xl bg-white p-2 text-start shadow-sm ring-1 transition sm:h-[4.5rem]",
+                          qty > 0 ? "ring-2 ring-orange-400" : "ring-slate-100",
+                          item.available ? "hover:ring-orange-300 hover:shadow" : "opacity-50 grayscale",
+                        )}
+                      >
+                        <p className="line-clamp-2 text-[11px] font-bold leading-tight text-slate-900 sm:text-xs">{item.name}</p>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="truncate text-[11px] font-black text-orange-600 sm:text-xs">{money(item.price)}</span>
+                          {soldOut && <span className="shrink-0 text-[9px] font-black text-red-600">{P.soldOut}</span>}
+                        </div>
+                        {qty > 0 && (
+                          <span className="absolute end-1 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-rose-500 px-1 text-[10px] font-black text-white shadow">
+                            {qty}
+                          </span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
             )}
           </section>
 

@@ -29,6 +29,7 @@ const STR = {
     soldOut: "Sold out",
     viewGrid: "Grid view",
     viewList: "List view",
+    viewText: "Text view (no pictures)",
     items: "items",
     review: "Review order →",
     yourOrder: "Your order",
@@ -62,6 +63,7 @@ const STR = {
     tagline: "امسح • اطلب • استمتع",
     viewGrid: "عرض شبكي",
     viewList: "عرض قائمة",
+    viewText: "عرض نصي (بدون صور)",
     all: "الكل",
     noItems: "لا توجد أصناف متاحة حالياً.",
     soldOut: "نفد من المخزون",
@@ -132,18 +134,20 @@ export function QrMenuClient({
   const theme = menuTheme ?? DEFAULT_MENU_THEME;
   const customOn = theme.custom?.enabled === true;
   const pal = customOn ? CUSTOM_PALETTE : MENU_PALETTE[theme.color];
-  const [viewOverride, setViewOverride] = useState<"grid" | "list" | null>(null);
+  const [viewOverride, setViewOverride] = useState<"grid" | "list" | "compact" | null>(null);
   useEffect(() => {
     try {
       const v = window.localStorage.getItem("kpos-menu-view");
-      if (v === "grid" || v === "list") setViewOverride(v);
+      if (v === "grid" || v === "list" || v === "compact") setViewOverride(v);
     } catch {}
   }, []);
-  const pickView = (v: "grid" | "list") => {
+  const pickView = (v: "grid" | "list" | "compact") => {
     setViewOverride(v);
     try { window.localStorage.setItem("kpos-menu-view", v); } catch {}
   };
-  const isGrid = (viewOverride ?? theme.layout) === "grid";
+  const viewMode = viewOverride ?? theme.layout;
+  const isGrid = viewMode === "grid";
+  const isCompact = viewMode === "compact";
   const customVars = customOn
     ? ({
         "--m-accent": theme.custom.accent,
@@ -435,16 +439,31 @@ export function QrMenuClient({
               aria-label={t.viewList}
               title={t.viewList}
               onClick={() => pickView("list")}
-              className={`grid h-8 w-8 place-items-center rounded-lg transition ${!isGrid ? pal.chipOn : pal.chipOff}`}
+              className={`grid h-8 w-8 place-items-center rounded-lg transition ${viewMode === "list" ? pal.chipOn : pal.chipOff}`}
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="9" y1="5" x2="21" y2="5"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="19" x2="21" y2="19"/><circle cx="4.2" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.2" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.2" cy="19" r="1.4" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <button
+              type="button"
+              aria-label={t.viewText}
+              title={t.viewText}
+              onClick={() => pickView("compact")}
+              className={`grid h-8 w-8 place-items-center rounded-lg transition ${isCompact ? pal.chipOn : pal.chipOff}`}
+            >
+              <span className="text-xs font-black">T</span>
             </button>
           </div>
         )}
         {list.length === 0 ? (
           <p className="py-16 text-center text-sm text-slate-500">{t.noItems}</p>
         ) : (
-          <ul className={isGrid ? "grid grid-cols-2 gap-3 sm:grid-cols-3" : "grid grid-cols-1 gap-3 sm:grid-cols-2"}>
+          <ul className={
+            isGrid
+              ? "grid grid-cols-2 gap-3 sm:grid-cols-3"
+              : isCompact
+                ? "grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2"
+                : "grid grid-cols-1 gap-3 sm:grid-cols-2"
+          }>
             {list.map((item) => {
               const soldOut = item.stockQty != null && item.stockQty <= 0;
               const key = String(item.id);
@@ -519,6 +538,31 @@ export function QrMenuClient({
                       </div>
                     )}
                   </div>
+                </li>
+              ) : isCompact ? (
+                /* Compact text tile: no pictures, name + price, tap to add */
+                <li key={item.id}>
+                  <button
+                    onClick={() => !soldOut && bump(key, 1)}
+                    disabled={soldOut}
+                    className={cn(
+                      "relative flex h-14 w-full flex-col justify-between overflow-hidden rounded-xl border bg-white p-2 text-start transition active:scale-95",
+                      pal.softBorder,
+                      qty > 0 && "ring-2 ring-slate-300",
+                      soldOut && "opacity-50",
+                    )}
+                  >
+                    <p className="line-clamp-2 text-[11px] font-bold leading-tight text-slate-900">{item.name}</p>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className={cn("truncate text-[11px] font-bold", pal.accentText)}>{money(item.price)}</p>
+                      {soldOut && <span className="shrink-0 text-[8px] font-black text-rose-600">{t.soldOut}</span>}
+                    </div>
+                    {qty > 0 && (
+                      <span className={cn("absolute end-1 top-1 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-black text-white", pal.solid)}>
+                        {qty}
+                      </span>
+                    )}
+                  </button>
                 </li>
               ) : (
                 /* List row (classic): art tile left, details mid, add right */

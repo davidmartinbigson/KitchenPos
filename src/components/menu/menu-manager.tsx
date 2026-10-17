@@ -14,6 +14,7 @@ import {
   X,
   LayoutGrid,
   List,
+  Type,
   Layers,
   CircleDollarSign,
   Check,
@@ -75,14 +76,14 @@ export function MenuManager({
   const [items, setItems] = useState<MenuItemDTO[]>(initialItems);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [itemView, setItemView] = useState<"grid" | "list">("grid");
+  const [itemView, setItemView] = useState<"grid" | "list" | "compact">("grid");
   useEffect(() => {
     try {
       const v = window.localStorage.getItem("kpos-menumgr-view");
-      if (v === "grid" || v === "list") setItemView(v);
+      if (v === "grid" || v === "list" || v === "compact") setItemView(v);
     } catch {}
   }, []);
-  const pickView = (v: "grid" | "list") => {
+  const pickView = (v: "grid" | "list" | "compact") => {
     setItemView(v);
     try { window.localStorage.setItem("kpos-menumgr-view", v); } catch {}
   };
@@ -415,6 +416,18 @@ export function MenuManager({
           >
             <List className="h-4.5 w-4.5" />
           </button>
+          <button
+            type="button"
+            title={t.pos.textView}
+            aria-label={t.pos.textView}
+            onClick={() => pickView("compact")}
+            className={cn(
+              "grid h-9 w-9 place-items-center rounded-xl transition",
+              itemView === "compact" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-slate-700",
+            )}
+          >
+            <Type className="h-4.5 w-4.5" />
+          </button>
         </div>
         <button
           type="button"
@@ -610,7 +623,7 @@ export function MenuManager({
             ))}
           </AnimatePresence>
         </motion.div>
-      ) : (
+      ) : itemView === "list" ? (
         <div className={cn("grid gap-2 sm:gap-2.5", filtered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
           <AnimatePresence mode="popLayout">
             {displayItems.map((item, i) => (
@@ -706,6 +719,54 @@ export function MenuManager({
                   </button>
                 </div>
                 </>)}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] sm:gap-2">
+          <AnimatePresence mode="popLayout">
+            {displayItems.map((item, i) => (
+              <motion.div
+                layout
+                key={item.id}
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={{ delay: Math.min(i * 0.01, 0.2), duration: 0.2 }}
+                onClick={selectMode ? () => toggleSelect(item.id) : undefined}
+                {...dragProps(item.id)}
+                className={cn(
+                  "relative flex h-16 flex-col justify-between overflow-hidden rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-100 transition hover:shadow sm:h-[4.25rem]",
+                  selectMode && "cursor-pointer",
+                  selectMode && selected.includes(item.id) && "ring-2 ring-orange-500",
+                  !item.available && "opacity-60",
+                )}
+              >
+                <p className="line-clamp-1 text-[11px] font-bold leading-tight text-slate-900 sm:text-xs">{item.name}</p>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="truncate text-[11px] font-black text-orange-600 sm:text-xs">{money(item.price)}</span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <span className={cn("h-2 w-2 rounded-full", item.available ? "bg-emerald-500" : "bg-slate-300")} title={item.available ? M.available : M.unavailable} />
+                    {selectMode && (
+                      <span className={cn(
+                        "grid h-4 w-4 place-items-center rounded-full ring-1",
+                        selected.includes(item.id) ? "bg-orange-500 text-white ring-orange-500" : "bg-white text-slate-400 ring-slate-300",
+                      )}>
+                        <Check className="h-2.5 w-2.5" />
+                      </span>
+                    )}
+                    {!selectMode && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEdit(item); }}
+                        aria-label={t.edit}
+                        className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-slate-500 transition hover:bg-orange-100 hover:text-orange-700"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
+                  </span>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
