@@ -421,7 +421,22 @@ input[type="number"] {
 .ps-change { color: #047857; }
 .ps-div { border-top: 1px dashed #94a3b8; margin: 8px 0; }
 
+/* ── Thermal-friendly printing: pages = receipt length, NEVER trailing blanks ──
+   Root cause of blank pages: "visibility:hidden" keeps the hidden app in the
+   layout, so the printer also emitted pages for the app's height. The fix is to
+   remove sibling trees entirely (display:none), center the paper via @page and
+   trim any trailing space after the last slip element. */
+@page {
+  size: auto;
+  margin: 0;
+}
+
 @media print {
+  /* Every top-level tree that does NOT contain a print sheet vanishes,
+     leaving the receipt as the only laid-out content. */
+  body > :not(:has(#print-sheet, #notifier-print-sheet)) {
+    display: none !important;
+  }
   body * {
     visibility: hidden !important;
   }
@@ -437,12 +452,21 @@ input[type="number"] {
     left: 0 !important;
     top: 0 !important;
     width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .print-slip {
     page-break-after: always;
   }
   .print-slip:last-child {
-    page-break-after: auto;
+    page-break-after: auto !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  /* Trailing space at the very end of a sheet would otherwise grow a new page. */
+  #print-sheet :last-child,
+  #notifier-print-sheet :last-child {
+    margin-bottom: 0 !important;
   }
 }
 
